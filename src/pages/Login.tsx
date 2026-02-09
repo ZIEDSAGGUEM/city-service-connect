@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { signIn } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +15,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +23,9 @@ export default function Login() {
 
     try {
       const response = await signIn({ email, password });
+      
+      // Set user in context
+      setUser(response.user);
       
       toast.success('Welcome back!', {
         description: 'You have been logged in successfully.',

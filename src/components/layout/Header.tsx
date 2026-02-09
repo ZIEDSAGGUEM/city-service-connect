@@ -11,17 +11,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Menu, X, MapPin, Search, User, LogOut, Settings, LayoutDashboard, Bot } from 'lucide-react';
-import { currentUser } from '@/lib/data';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
-  isAuthenticated?: boolean;
-  userRole?: 'client' | 'provider';
   onOpenAI?: () => void;
 }
 
-export function Header({ isAuthenticated = true, userRole = 'client', onOpenAI }: HeaderProps) {
+export function Header({ onOpenAI }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navLinks = [
     { name: 'Browse Services', path: '/services' },
@@ -72,28 +71,33 @@ export function Header({ isAuthenticated = true, userRole = 'client', onOpenAI }
             <span>AI Assistant</span>
           </Button>
 
-          {isAuthenticated ? (
+          {isAuthenticated && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10 border-2 border-primary/20">
-                    <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                    <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+                    <p className="text-sm font-medium leading-none">{user.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {currentUser.email}
+                      {user.email}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground capitalize">
+                      {user.role.toLowerCase()}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to={userRole === 'client' ? '/dashboard' : '/provider-dashboard'} className="flex items-center">
+                  <Link to={user.role === 'CLIENT' ? '/dashboard' : '/provider-dashboard'} className="flex items-center">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     Dashboard
                   </Link>
@@ -111,11 +115,9 @@ export function Header({ isAuthenticated = true, userRole = 'client', onOpenAI }
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/login" className="flex items-center text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </Link>
+                <DropdownMenuItem onClick={logout} className="flex items-center text-destructive cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
