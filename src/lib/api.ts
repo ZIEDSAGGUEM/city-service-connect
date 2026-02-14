@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, RequestStatus } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -128,6 +128,53 @@ export const categoriesApi = {
   // Get category by ID (public)
   getById: async (id: string): Promise<Category> => {
     const response = await api.get(`/categories/${id}`);
+    return response.data;
+  },
+};
+
+// Service Requests API
+export const serviceRequestsApi = {
+  // Create service request (CLIENT only)
+  create: async (data: CreateServiceRequestDto): Promise<ServiceRequest> => {
+    const response = await api.post('/service-requests', data);
+    return response.data;
+  },
+
+  // Get my service requests (CLIENT only)
+  getMyRequests: async (status?: RequestStatus): Promise<ServiceRequest[]> => {
+    const params = status ? { status } : {};
+    const response = await api.get('/service-requests/my-requests', { params });
+    return response.data;
+  },
+
+  // Get requests for my provider profile (PROVIDER only)
+  getProviderRequests: async (status?: RequestStatus): Promise<ServiceRequest[]> => {
+    const params = status ? { status } : {};
+    const response = await api.get('/service-requests/provider-requests', { params });
+    return response.data;
+  },
+
+  // Get service request by ID (CLIENT or PROVIDER)
+  getById: async (id: string): Promise<ServiceRequest> => {
+    const response = await api.get(`/service-requests/${id}`);
+    return response.data;
+  },
+
+  // Cancel service request (CLIENT only)
+  cancel: async (id: string, data?: CancelServiceRequestDto): Promise<ServiceRequest> => {
+    const response = await api.put(`/service-requests/${id}/cancel`, data || {});
+    return response.data;
+  },
+
+  // Accept service request (PROVIDER only)
+  accept: async (id: string): Promise<ServiceRequest> => {
+    const response = await api.put(`/service-requests/${id}/accept`);
+    return response.data;
+  },
+
+  // Decline service request (PROVIDER only)
+  decline: async (id: string, reason?: string): Promise<ServiceRequest> => {
+    const response = await api.put(`/service-requests/${id}/decline`, { reason });
     return response.data;
   },
 };

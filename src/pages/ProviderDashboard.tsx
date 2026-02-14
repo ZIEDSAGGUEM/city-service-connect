@@ -8,16 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProviderProfileForm } from '@/components/providers/ProviderProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { providersApi } from '@/lib/api';
-import type { Provider } from '@/lib/types';
-import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp } from 'lucide-react';
+import { providersApi, serviceRequestsApi } from '@/lib/api';
+import type { Provider, ServiceRequest, RequestStatus } from '@/lib/types';
+import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function ProviderDashboard() {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [provider, setProvider] = useState<Provider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { user } = useAuth();
 
   // Fetch provider profile
@@ -35,9 +39,65 @@ export default function ProviderDashboard() {
     }
   };
 
+  // Fetch incoming service requests
+  const fetchRequests = async () => {
+    setIsLoadingRequests(true);
+    try {
+      const data = await serviceRequestsApi.getProviderRequests();
+      setRequests(data);
+    } catch (error: any) {
+      console.error('Failed to fetch requests:', error);
+      toast.error('Failed to load service requests');
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
   useEffect(() => {
     fetchProvider();
   }, []);
+
+  useEffect(() => {
+    if (provider) {
+      fetchRequests();
+    }
+  }, [provider]);
+
+  // Handle accept request
+  const handleAcceptRequest = async (requestId: string) => {
+    setActionLoading(requestId);
+    try {
+      await serviceRequestsApi.accept(requestId);
+      toast.success('Request accepted successfully!');
+      fetchRequests(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to accept request:', error);
+      toast.error('Failed to accept request', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle decline request
+  const handleDeclineRequest = async (requestId: string) => {
+    if (!confirm('Are you sure you want to decline this request?')) return;
+    
+    setActionLoading(requestId);
+    try {
+      await serviceRequestsApi.decline(requestId);
+      toast.success('Request declined');
+      fetchRequests(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to decline request:', error);
+      toast.error('Failed to decline request', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleProfileSuccess = () => {
     setShowEditForm(false);
@@ -252,14 +312,126 @@ export default function ProviderDashboard() {
                     </TabsContent>
 
                     {/* Requests Tab */}
-                    <TabsContent value="requests">
-                      <div className="text-center py-12">
-                        <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">Service Requests</h3>
-                        <p className="text-muted-foreground">
-                          Service requests feature coming soon!
-                        </p>
-                      </div>
+                    <TabsContent value="requests" className="space-y-4">
+                      {isLoadingRequests ? (
+                        <div className="flex justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : requests.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">No Service Requests</h3>
+                          <p className="text-muted-foreground">
+                            You haven't received any service requests yet.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {requests.map((request) => {
+                            const statusConfig: Record<RequestStatus, { label: string; color: string; icon: any }> = {
+                              PENDING: { label: 'Pending', color: 'bg-warning/20 text-warning', icon: Clock },
+                              ACCEPTED: { label: 'Accepted', color: 'bg-success/20 text-success', icon: CheckCircle },
+                              IN_PROGRESS: { label: 'In Progress', color: 'bg-primary/20 text-primary', icon: Loader2 },
+                              COMPLETED: { label: 'Completed', color: 'bg-success/20 text-success', icon: CheckCircle },
+                              CANCELLED: { label: 'Cancelled', color: 'bg-destructive/20 text-destructive', icon: AlertCircle },
+                            };
+                            
+                            const config = statusConfig[request.status];
+                            const StatusIcon = config.icon;
+
+                            return (
+                              <Card key={request.id}>
+                                <CardContent className="p-6">
+                                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                    <div className="flex items-start gap-4 flex-1">
+                                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
+                                        <Calendar className="h-6 w-6 text-muted-foreground" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <h3 className="font-semibold text-foreground">{request.title}</h3>
+                                          <Badge className={config.color}>
+                                            <StatusIcon className="h-3 w-3 mr-1" />
+                                            {config.label}
+                                          </Badge>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mb-2">
+                                          From: {request.client?.name || 'Unknown Client'}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground mb-2">
+                                          {request.description}
+                                        </p>
+                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                          {request.preferredDate && (
+                                            <span className="flex items-center gap-1">
+                                              <Calendar className="h-4 w-4" />
+                                              {new Date(request.preferredDate).toLocaleDateString()}
+                                            </span>
+                                          )}
+                                          {request.preferredTime && (
+                                            <span className="flex items-center gap-1">
+                                              <Clock className="h-4 w-4" />
+                                              {request.preferredTime}
+                                            </span>
+                                          )}
+                                          {request.estimatedBudget && (
+                                            <span className="flex items-center gap-1">
+                                              <DollarSign className="h-4 w-4" />
+                                              ${request.estimatedBudget}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                          Received {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {request.status === 'PENDING' && (
+                                        <>
+                                          <Button 
+                                            variant="hero" 
+                                            size="sm"
+                                            onClick={() => handleAcceptRequest(request.id)}
+                                            disabled={actionLoading === request.id}
+                                          >
+                                            {actionLoading === request.id ? (
+                                              <>
+                                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                                Accepting...
+                                              </>
+                                            ) : (
+                                              'Accept'
+                                            )}
+                                          </Button>
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => handleDeclineRequest(request.id)}
+                                            disabled={actionLoading === request.id}
+                                          >
+                                            Decline
+                                          </Button>
+                                        </>
+                                      )}
+                                      {request.status === 'ACCEPTED' && (
+                                        <Button variant="outline" size="sm" disabled>
+                                          Start Job (Coming Soon)
+                                        </Button>
+                                      )}
+                                      {request.status === 'IN_PROGRESS' && (
+                                        <Button variant="hero" size="sm" disabled>
+                                          Mark Complete (Coming Soon)
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
                     </TabsContent>
 
                     {/* Analytics Tab */}

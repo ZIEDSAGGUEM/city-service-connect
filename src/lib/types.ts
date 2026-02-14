@@ -126,3 +126,75 @@ export interface Review {
   };
 }
 
+// Service Request Types
+export type RequestStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+export interface ServiceRequest {
+  id: string;
+  clientId: string;
+  providerId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  location?: string | null;
+  preferredDate: string;
+  preferredTime: string;
+  scheduledDate?: string | null;
+  estimatedBudget?: number | null;
+  finalPrice?: number | null;
+  status: RequestStatus;
+  cancelledBy?: string | null;
+  cancelReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  client?: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string | null;
+    phone?: string | null;
+    location?: string | null;
+  };
+  provider?: {
+    id: string;
+    userId: string;
+    categoryId: string;
+    hourlyRate: number;
+    rating: number;
+    reviewCount: number;
+    user?: {
+      id: string;
+      name: string;
+      avatar?: string | null;
+      phone?: string | null;
+      location?: string | null;
+    };
+    category?: {
+      id: string;
+      name: string;
+      icon: string;
+    };
+  };
+  category?: {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+  };
+}
+
+export interface CreateServiceRequestDto {
+  providerId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  location?: string;
+  preferredDate: string;
+  preferredTime: string;
+  estimatedBudget?: number;
+}
+
+export interface CancelServiceRequestDto {
+  reason?: string;
+}
+
