@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Provider } from '@/lib/data';
+import type { Provider } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Star, Shield, Clock, MapPin } from 'lucide-react';
@@ -10,15 +10,15 @@ interface ProviderCardProps {
 
 export function ProviderCard({ provider }: ProviderCardProps) {
   const availabilityColors = {
-    available: 'bg-success text-success-foreground',
-    busy: 'bg-warning text-warning-foreground',
-    unavailable: 'bg-muted text-muted-foreground',
+    AVAILABLE: 'bg-success text-success-foreground',
+    BUSY: 'bg-warning text-warning-foreground',
+    UNAVAILABLE: 'bg-muted text-muted-foreground',
   };
 
   const availabilityLabels = {
-    available: 'Available Now',
-    busy: 'Busy',
-    unavailable: 'Unavailable',
+    AVAILABLE: 'Available Now',
+    BUSY: 'Busy',
+    UNAVAILABLE: 'Unavailable',
   };
 
   return (
@@ -30,22 +30,24 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       <div className="relative p-5 pb-0">
         <div className="flex items-start gap-4">
           <Avatar className="h-16 w-16 border-2 border-primary/20">
-            <AvatarImage src={provider.avatar} alt={provider.name} />
-            <AvatarFallback>{provider.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={provider.user?.avatar || undefined} alt={provider.user?.name || 'Provider'} />
+            <AvatarFallback>{provider.user?.name?.charAt(0).toUpperCase() || 'P'}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-display font-semibold text-lg text-foreground truncate group-hover:text-primary transition-colors">
-                {provider.name}
+                {provider.user?.name || 'Unknown Provider'}
               </h3>
               {provider.verified && (
                 <Shield className="h-4 w-4 text-primary flex-shrink-0" />
               )}
             </div>
-            <p className="text-sm text-muted-foreground mb-2">{provider.category}</p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {provider.category?.icon} {provider.category?.name || 'Service Provider'}
+            </p>
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-accent text-accent" />
-              <span className="font-medium text-foreground">{provider.rating}</span>
+              <span className="font-medium text-foreground">{provider.rating.toFixed(1)}</span>
               <span className="text-sm text-muted-foreground">
                 ({provider.reviewCount} reviews)
               </span>
@@ -64,7 +66,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       {/* Body */}
       <div className="p-5">
         <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-          {provider.description}
+          {provider.bio || 'No description available'}
         </p>
 
         {/* Skills */}
@@ -91,10 +93,12 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               <Clock className="h-4 w-4" />
               <span>{provider.responseTime}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              <span>{provider.location}</span>
-            </div>
+            {provider.user?.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                <span>{provider.user.location}</span>
+              </div>
+            )}
           </div>
           <p className="font-semibold text-foreground">
             ${provider.hourlyRate}<span className="text-sm font-normal text-muted-foreground">/hr</span>

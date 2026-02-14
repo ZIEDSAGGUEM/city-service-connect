@@ -1,250 +1,282 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { providerUser } from '@/lib/data';
-import { Calendar, Clock, DollarSign, Star, MessageSquare, CheckCircle, AlertCircle, TrendingUp, Users, Briefcase } from 'lucide-react';
-
-const incomingRequests = [
-  { id: '1', clientName: 'John Smith', clientAvatar: 'https://images.unsplash.com/photo-1599566150163-29194dcabd36?w=100', service: 'Deep Cleaning', date: '2024-01-25', time: '10:00 AM', budget: 150, status: 'pending' },
-  { id: '2', clientName: 'Emily Davis', clientAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100', service: 'Move-out Cleaning', date: '2024-01-26', time: '2:00 PM', budget: 200, status: 'pending' },
-];
-
-const upcomingJobs = [
-  { id: '3', clientName: 'Michael Chen', clientAvatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100', service: 'Regular Cleaning', date: '2024-01-24', time: '9:00 AM', budget: 100, status: 'accepted' },
-];
-
-const completedJobs = [
-  { id: '4', clientName: 'Sarah Wilson', clientAvatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100', service: 'Deep Cleaning', date: '2024-01-20', budget: 180, rating: 5 },
-  { id: '5', clientName: 'Tom Anderson', clientAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100', service: 'Move-in Cleaning', date: '2024-01-18', budget: 220, rating: 5 },
-];
+import { ProviderProfileForm } from '@/components/providers/ProviderProfileForm';
+import { useAuth } from '@/contexts/AuthContext';
+import { providersApi } from '@/lib/api';
+import type { Provider } from '@/lib/types';
+import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ProviderDashboard() {
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(true);
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const { user } = useAuth();
 
+  // Fetch provider profile
+  const fetchProvider = async () => {
+    setIsLoading(true);
+    try {
+      const data = await providersApi.getMyProfile();
+      setProvider(data);
+    } catch (error: any) {
+      // Provider profile doesn't exist yet
+      console.log('No provider profile found');
+      setProvider(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProvider();
+  }, []);
+
+  const handleProfileSuccess = () => {
+    setShowEditForm(false);
+    fetchProvider();
+    toast.success('Profile saved successfully!');
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header onOpenAI={() => setIsAIOpen(true)} />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            <p className="text-lg text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // No profile yet - show create form
+  if (!provider) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
+        <Header onOpenAI={() => setIsAIOpen(true)} />
+        <main className="flex-1 container py-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-8 text-center">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-10 w-10 text-primary" />
+              </div>
+              <h1 className="text-3xl font-display font-bold text-foreground mb-2">
+                Create Your Provider Profile
+              </h1>
+              <p className="text-muted-foreground">
+                Complete your profile to start receiving service requests from clients
+              </p>
+            </div>
+
+            <div className="bg-card rounded-2xl shadow-soft p-8">
+              <ProviderProfileForm onSuccess={handleProfileSuccess} />
+            </div>
+          </div>
+        </main>
+        <Footer />
+        <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
+      </div>
+    );
+  }
+
+  // Has profile - show dashboard
   const stats = [
-    { label: 'New Requests', value: incomingRequests.length, icon: AlertCircle, color: 'text-warning' },
-    { label: 'Upcoming Jobs', value: upcomingJobs.length, icon: Calendar, color: 'text-primary' },
-    { label: 'This Month', value: '$1,240', icon: DollarSign, color: 'text-success' },
-    { label: 'Avg Rating', value: '4.9', icon: Star, color: 'text-accent' },
+    { label: 'Completed Jobs', value: provider.completedJobs, icon: Briefcase, color: 'text-primary' },
+    { label: 'Average Rating', value: provider.rating.toFixed(1), icon: Star, color: 'text-accent' },
+    { label: 'Total Reviews', value: provider.reviewCount, icon: AlertCircle, color: 'text-success' },
+    { label: 'Hourly Rate', value: `$${provider.hourlyRate}`, icon: DollarSign, color: 'text-warning' },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header onOpenAI={() => setIsAIOpen(true)} userRole="provider" />
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
+      <Header onOpenAI={() => setIsAIOpen(true)} />
       
-      <main className="flex-1 bg-background">
-        {/* Header */}
+      <main className="flex-1">
+        {/* Header Section */}
         <div className="bg-secondary/50 border-b border-border">
           <div className="container py-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <img
-                  src={providerUser.avatar}
-                  alt={providerUser.name}
-                  className="h-16 w-16 rounded-full object-cover border-4 border-primary/20"
-                />
-                <div>
-                  <h1 className="font-display text-2xl font-bold text-foreground">
-                    {providerUser.name}
-                  </h1>
-                  <p className="text-muted-foreground">Provider Dashboard</p>
+                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Briefcase className="h-10 w-10 text-primary" />
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Availability:</span>
-                  <Switch
-                    checked={isAvailable}
-                    onCheckedChange={setIsAvailable}
-                  />
-                  <Badge className={isAvailable ? 'bg-success text-success-foreground' : 'bg-muted text-muted-foreground'}>
-                    {isAvailable ? 'Available' : 'Unavailable'}
+                <div>
+                  <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
+                    {user?.name}
+                    {provider.verified && <Shield className="h-6 w-6 text-primary" />}
+                  </h1>
+                  <p className="text-muted-foreground mt-1">
+                    {provider.category?.icon} {provider.category?.name} Provider
+                  </p>
+                  <Badge className="mt-2" variant={provider.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                    {provider.status}
                   </Badge>
                 </div>
               </div>
+              <Button onClick={() => setShowEditForm(!showEditForm)} variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                {showEditForm ? 'Cancel Edit' : 'Edit Profile'}
+              </Button>
             </div>
           </div>
         </div>
 
         <div className="container py-8">
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {stats.map((stat, index) => (
-              <Card key={stat.label} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-secondary`}>
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Incoming Requests */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-warning" />
-                    Incoming Requests
-                  </CardTitle>
-                  <CardDescription>New service requests from clients</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {incomingRequests.map((request) => (
-                    <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-secondary/50 rounded-xl">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={request.clientAvatar}
-                          alt={request.clientName}
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                        <div>
-                          <h4 className="font-medium text-foreground">{request.clientName}</h4>
-                          <p className="text-sm text-muted-foreground">{request.service}</p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>{request.date}</span>
-                            <span>{request.time}</span>
-                            <span className="font-medium text-foreground">${request.budget}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="success" size="sm">Accept</Button>
-                        <Button variant="outline" size="sm">Decline</Button>
-                        <Button variant="ghost" size="sm">
-                          <MessageSquare className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {incomingRequests.length === 0 && (
-                    <p className="text-center text-muted-foreground py-8">No pending requests</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Upcoming Jobs */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-primary" />
-                    Upcoming Jobs
-                  </CardTitle>
-                  <CardDescription>Your scheduled appointments</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {upcomingJobs.map((job) => (
-                    <div key={job.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-primary/5 rounded-xl border border-primary/20">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={job.clientAvatar}
-                          alt={job.clientName}
-                          className="h-12 w-12 rounded-full object-cover"
-                        />
-                        <div>
-                          <h4 className="font-medium text-foreground">{job.clientName}</h4>
-                          <p className="text-sm text-muted-foreground">{job.service}</p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {job.date}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {job.time}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-success/20 text-success">Confirmed</Badge>
-                        <span className="font-semibold text-foreground">${job.budget}</span>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+          {showEditForm ? (
+            // Edit Profile Form
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-2xl font-bold mb-6">Edit Your Profile</h2>
+              <div className="bg-card rounded-2xl shadow-soft p-8">
+                <ProviderProfileForm provider={provider} onSuccess={handleProfileSuccess} />
+              </div>
             </div>
-
-            {/* Sidebar */}
+          ) : (
+            // Dashboard View
             <div className="space-y-6">
-              {/* Quick Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-success" />
-                    Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Response Rate</span>
-                    <span className="font-semibold text-foreground">98%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Completion Rate</span>
-                    <span className="font-semibold text-foreground">100%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Repeat Clients</span>
-                    <span className="font-semibold text-foreground">45%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">This Month</span>
-                    <span className="font-semibold text-success">+12 jobs</span>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {stats.map((stat, index) => (
+                  <Card key={index}>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {stat.label}
+                      </CardTitle>
+                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{stat.value}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-              {/* Recent Reviews */}
+              {/* Profile Information Tabs */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-accent" />
-                    Recent Reviews
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {completedJobs.slice(0, 2).map((job) => (
-                    <div key={job.id} className="pb-4 border-b border-border last:border-0 last:pb-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <img
-                          src={job.clientAvatar}
-                          alt={job.clientName}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
+                <Tabs defaultValue="overview" className="w-full">
+                  <CardHeader>
+                    <TabsList className="w-full justify-start">
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="requests">Requests</TabsTrigger>
+                      <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                    </TabsList>
+                  </CardHeader>
+
+                  <CardContent>
+                    {/* Overview Tab */}
+                    <TabsContent value="overview" className="space-y-6">
+                      {/* Profile Details */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">About You</h3>
+                        <p className="text-muted-foreground">
+                          {provider.bio || 'No bio added yet'}
+                        </p>
+                      </div>
+
+                      {/* Skills */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">Skills</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {provider.skills.map((skill) => (
+                            <Badge key={skill} variant="secondary">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
                         <div>
-                          <p className="text-sm font-medium text-foreground">{job.clientName}</p>
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: job.rating }).map((_, i) => (
-                              <Star key={i} className="h-3 w-3 fill-accent text-accent" />
+                          <p className="text-sm text-muted-foreground">Years of Experience</p>
+                          <p className="text-lg font-semibold">{provider.yearsExperience} years</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Response Time</p>
+                          <p className="text-lg font-semibold">{provider.responseTime}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Service Radius</p>
+                          <p className="text-lg font-semibold">{provider.serviceRadius} km</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Availability</p>
+                          <Badge className="text-sm">
+                            {provider.availability}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Certifications */}
+                      {provider.certifications.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-3">Certifications</h3>
+                          <ul className="space-y-2">
+                            {provider.certifications.map((cert, index) => (
+                              <li key={index} className="flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-success" />
+                                <span>{cert}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Portfolio */}
+                      {provider.portfolio.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-3">Portfolio</h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {provider.portfolio.map((image, index) => (
+                              <img
+                                key={index}
+                                src={image}
+                                alt={`Portfolio ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
                             ))}
                           </div>
                         </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Requests Tab */}
+                    <TabsContent value="requests">
+                      <div className="text-center py-12">
+                        <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Service Requests</h3>
+                        <p className="text-muted-foreground">
+                          Service requests feature coming soon!
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{job.service} • {job.date}</p>
-                    </div>
-                  ))}
-                </CardContent>
+                    </TabsContent>
+
+                    {/* Analytics Tab */}
+                    <TabsContent value="analytics">
+                      <div className="text-center py-12">
+                        <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">Analytics & Insights</h3>
+                        <p className="text-muted-foreground">
+                          Analytics dashboard coming soon!
+                        </p>
+                      </div>
+                    </TabsContent>
+                  </CardContent>
+                </Tabs>
               </Card>
             </div>
-          </div>
+          )}
         </div>
       </main>
 
