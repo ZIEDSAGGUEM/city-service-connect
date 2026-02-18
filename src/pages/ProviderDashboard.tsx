@@ -99,6 +99,42 @@ export default function ProviderDashboard() {
     }
   };
 
+  // Handle start request
+  const handleStartRequest = async (requestId: string) => {
+    setActionLoading(requestId);
+    try {
+      await serviceRequestsApi.start(requestId);
+      toast.success('Job started successfully!');
+      fetchRequests(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to start job:', error);
+      toast.error('Failed to start job', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle complete request
+  const handleCompleteRequest = async (requestId: string) => {
+    if (!confirm('Mark this job as completed? The client will be able to leave a review.')) return;
+    
+    setActionLoading(requestId);
+    try {
+      await serviceRequestsApi.complete(requestId);
+      toast.success('Job completed! 🎉');
+      fetchRequests(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to complete job:', error);
+      toast.error('Failed to complete job', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleProfileSuccess = () => {
     setShowEditForm(false);
     fetchProvider();
@@ -415,13 +451,37 @@ export default function ProviderDashboard() {
                                         </>
                                       )}
                                       {request.status === 'ACCEPTED' && (
-                                        <Button variant="outline" size="sm" disabled>
-                                          Start Job (Coming Soon)
+                                        <Button 
+                                          variant="hero" 
+                                          size="sm"
+                                          onClick={() => handleStartRequest(request.id)}
+                                          disabled={actionLoading === request.id}
+                                        >
+                                          {actionLoading === request.id ? (
+                                            <>
+                                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                              Starting...
+                                            </>
+                                          ) : (
+                                            'Start Job'
+                                          )}
                                         </Button>
                                       )}
                                       {request.status === 'IN_PROGRESS' && (
-                                        <Button variant="hero" size="sm" disabled>
-                                          Mark Complete (Coming Soon)
+                                        <Button 
+                                          variant="hero" 
+                                          size="sm"
+                                          onClick={() => handleCompleteRequest(request.id)}
+                                          disabled={actionLoading === request.id}
+                                        >
+                                          {actionLoading === request.id ? (
+                                            <>
+                                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                              Completing...
+                                            </>
+                                          ) : (
+                                            'Mark Complete'
+                                          )}
                                         </Button>
                                       )}
                                     </div>

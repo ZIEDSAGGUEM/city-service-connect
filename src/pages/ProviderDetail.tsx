@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, Shield, Clock, MapPin, Briefcase, Loader2, MessageSquare, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { providersApi } from '@/lib/api';
-import type { Provider } from '@/lib/types';
+import { providersApi, reviewsApi } from '@/lib/api';
+import type { Provider, Review } from '@/lib/types';
 import { BookingRequestDialog } from '@/components/service-requests/BookingRequestDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function ProviderDetail() {
   const { id } = useParams();
@@ -20,7 +21,9 @@ export default function ProviderDetail() {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [provider, setProvider] = useState<Provider | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
 
   // Fetch provider data
   useEffect(() => {
@@ -41,6 +44,27 @@ export default function ProviderDetail() {
 
     fetchProvider();
   }, [id]);
+
+  // Fetch reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!id) return;
+      
+      setIsLoadingReviews(true);
+      try {
+        const data = await reviewsApi.getProviderReviews(id);
+        setReviews(data);
+      } catch (error: any) {
+        console.error('Failed to fetch reviews:', error);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    };
+
+    if (provider) {
+      fetchReviews();
+    }
+  }, [id, provider]);
 
   const availabilityColors = {
     AVAILABLE: 'bg-success text-success-foreground',
@@ -232,14 +256,69 @@ export default function ProviderDetail() {
 
                 {/* Reviews Tab */}
                 <TabsContent value="reviews" className="mt-0">
-                  <h2 className="text-xl font-semibold mb-4">Reviews</h2>
-                  <div className="space-y-4">
-                    {provider.reviewCount > 0 ? (
-                      <p className="text-muted-foreground">Reviews feature coming soon!</p>
-                    ) : (
-                      <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-xl font-semibold">Reviews</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {provider.reviewCount} {provider.reviewCount === 1 ? 'review' : 'reviews'}
+                      </p>
+                    </div>
+                    {provider.reviewCount > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Star className="h-6 w-6 fill-accent text-accent" />
+                        <span className="text-2xl font-bold">{provider.rating.toFixed(1)}</span>
+                      </div>
                     )}
                   </div>
+
+                  {isLoadingReviews ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : reviews.length > 0 ? (
+                    <div className="space-y-6">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="border-b pb-6 last:border-0">
+                          <div className="flex items-start gap-4">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={review.client?.avatar || undefined} />
+                              <AvatarFallback>
+                                {review.client?.name?.charAt(0) || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="font-semibold">{review.client?.name || 'Anonymous'}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-4 w-4 ${
+                                        i < review.rating
+                                          ? 'fill-accent text-accent'
+                                          : 'text-muted'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <p className="text-muted-foreground">{review.comment}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
+                    </div>
+                  )}
                 </TabsContent>
               </div>
             </Tabs>

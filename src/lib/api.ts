@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, RequestStatus } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -175,6 +175,33 @@ export const serviceRequestsApi = {
   // Decline service request (PROVIDER only)
   decline: async (id: string, reason?: string): Promise<ServiceRequest> => {
     const response = await api.put(`/service-requests/${id}/decline`, { reason });
+    return response.data;
+  },
+
+  // Start service request (PROVIDER only)
+  start: async (id: string): Promise<ServiceRequest> => {
+    const response = await api.put(`/service-requests/${id}/start`);
+    return response.data;
+  },
+
+  // Complete service request (PROVIDER only)
+  complete: async (id: string, data?: CompleteServiceRequestDto): Promise<ServiceRequest> => {
+    const response = await api.put(`/service-requests/${id}/complete`, data || {});
+    return response.data;
+  },
+};
+
+// Reviews API
+export const reviewsApi = {
+  // Create review (CLIENT only)
+  create: async (data: CreateReviewDto): Promise<Review> => {
+    const response = await api.post('/reviews', data);
+    return response.data;
+  },
+
+  // Get reviews for a provider (public)
+  getProviderReviews: async (providerId: string): Promise<Review[]> => {
+    const response = await api.get(`/reviews/provider/${providerId}`);
     return response.data;
   },
 };

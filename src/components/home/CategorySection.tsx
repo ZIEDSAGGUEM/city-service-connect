@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { categories } from '@/lib/data';
-import { Home, Wrench, Zap, Trees, Truck, Paintbrush, Hammer, Dog, ArrowRight } from 'lucide-react';
+import { Home, Wrench, Zap, Trees, Truck, Paintbrush, Hammer, Dog, ArrowRight, Loader2 } from 'lucide-react';
+import { categoriesApi } from '@/lib/api';
+import type { Category } from '@/lib/types';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   home: Home,
@@ -14,6 +16,23 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export function CategorySection() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoriesApi.getAll();
+        setCategories(data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
   return (
     <section className="py-16 md:py-24 bg-background">
       <div className="container">
@@ -37,8 +56,13 @@ export function CategorySection() {
         </div>
 
         {/* Category Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {categories.map((category, index) => {
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {categories.map((category, index) => {
             const Icon = iconMap[category.icon] || Home;
             return (
               <Link
@@ -67,7 +91,8 @@ export function CategorySection() {
               </Link>
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );

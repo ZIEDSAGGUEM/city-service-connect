@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
-import { serviceRequestsApi } from '@/lib/api';
+import { serviceRequestsApi, reviewsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ServiceRequest, RequestStatus } from '@/lib/types';
 import { toast } from 'sonner';
@@ -19,6 +22,10 @@ export default function Dashboard() {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [reviewDialog, setReviewDialog] = useState<{ open: boolean; request: ServiceRequest | null }>({ open: false, request: null });
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     // Only fetch requests if user is loaded and authenticated
@@ -56,6 +63,45 @@ export default function Dashboard() {
       toast.error('Failed to cancel request', {
         description: error.response?.data?.message || 'Please try again',
       });
+    }
+  };
+
+  const handleOpenReviewDialog = (request: ServiceRequest) => {
+    setReviewDialog({ open: true, request });
+    setReviewRating(5);
+    setReviewComment('');
+  };
+
+  const handleCloseReviewDialog = () => {
+    setReviewDialog({ open: false, request: null });
+    setReviewRating(5);
+    setReviewComment('');
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewDialog.request) return;
+    if (!reviewComment.trim()) {
+      toast.error('Please write a comment for your review');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      await reviewsApi.create({
+        requestId: reviewDialog.request.id,
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      });
+      toast.success('Review submitted successfully! 🌟');
+      handleCloseReviewDialog();
+      fetchRequests(); // Refresh to potentially update UI
+    } catch (error: any) {
+      console.error('Failed to submit review:', error);
+      toast.error('Failed to submit review', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -268,7 +314,11 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleOpenReviewDialog(request)}
+                            >
                               <Star className="h-4 w-4 mr-1" />
                               Leave Review
                             </Button>
@@ -307,6 +357,87 @@ export default function Dashboard() {
 
       <Footer />
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
+
+      {/* Review Dialog */}
+      <Dialog open={reviewDialog.open} onOpenChange={(open) => !open && handleCloseReviewDialog()}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Leave a Review</DialogTitle>
+            <DialogDescription>
+              Share your experience with {reviewDialog.request?.provider?.user?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Rating */}
+            <div className="space-y-2">
+              <Label htmlFor="rating">Rating</Label>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    type="button"
+                    onClick={() => setReviewRating(rating)}
+                    className="focus:outline-none transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={`h-8 w-8 ${
+                        rating <= reviewRating
+                          ? 'fill-warning text-warning'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                  </button>
+                ))}
+                <span className="ml-2 text-sm font-medium">{reviewRating} / 5</span>
+              </div>
+            </div>
+
+            {/* Comment */}
+            <div className="space-y-2">
+              <Label htmlFor="comment">Your Review</Label>
+              <Textarea
+                id="comment"
+                placeholder="Tell us about your experience..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                rows={5}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Share details about the service quality, professionalism, and overall experience.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCloseReviewDialog}
+              disabled={isSubmittingReview}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="hero"
+              onClick={handleSubmitReview}
+              disabled={isSubmittingReview || !reviewComment.trim()}
+            >
+              {isSubmittingReview ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Star className="h-4 w-4 mr-2" />
+                  Submit Review
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

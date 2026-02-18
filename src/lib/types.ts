@@ -113,17 +113,23 @@ export interface SearchProvidersFilters {
 // Review Types
 export interface Review {
   id: string;
+  requestId: string;
   clientId: string;
   providerId: string;
   rating: number;
   comment: string;
-  serviceType: string;
   createdAt: Date;
   updatedAt: Date;
   client?: {
     name: string;
     avatar?: string | null;
   };
+}
+
+export interface CreateReviewDto {
+  requestId: string;
+  rating: number;
+  comment: string;
 }
 
 // Service Request Types
@@ -145,6 +151,9 @@ export interface ServiceRequest {
   status: RequestStatus;
   cancelledBy?: string | null;
   cancelReason?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  completionNotes?: string | null;
   createdAt: string;
   updatedAt: string;
   client?: {
@@ -196,5 +205,10 @@ export interface CreateServiceRequestDto {
 
 export interface CancelServiceRequestDto {
   reason?: string;
+}
+
+export interface CompleteServiceRequestDto {
+  completionNotes?: string;
+  finalPrice?: number;
 }
 

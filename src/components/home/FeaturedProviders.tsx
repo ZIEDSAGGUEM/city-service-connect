@@ -1,11 +1,33 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { providers } from '@/lib/data';
 import { ProviderCard } from '@/components/providers/ProviderCard';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { providersApi } from '@/lib/api';
+import type { Provider } from '@/lib/types';
 
 export function FeaturedProviders() {
-  const featuredProviders = providers.slice(0, 4);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTopProviders = async () => {
+      try {
+        // Fetch providers and sort by rating, take top 4
+        const data = await providersApi.search({ minRating: 4 });
+        const topProviders = data
+          .sort((a, b) => b.rating - a.rating)
+          .slice(0, 4);
+        setProviders(topProviders);
+      } catch (error) {
+        console.error('Failed to fetch providers:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTopProviders();
+  }, []);
 
   return (
     <section className="py-16 md:py-24 bg-secondary/30">
@@ -29,8 +51,13 @@ export function FeaturedProviders() {
         </div>
 
         {/* Provider Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProviders.map((provider, index) => (
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : providers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {providers.map((provider, index) => (
             <div
               key={provider.id}
               className="animate-slide-up"
@@ -39,7 +66,12 @@ export function FeaturedProviders() {
               <ProviderCard provider={provider} />
             </div>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No providers available yet.</p>
+          </div>
+        )}
       </div>
     </section>
   );
