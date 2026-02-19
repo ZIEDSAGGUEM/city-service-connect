@@ -8,7 +8,11 @@ export interface User {
   name: string;
   role: UserRole;
   avatar?: string | null;
+  phone?: string | null;
+  location?: string | null;
   verified: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface AuthResponse {

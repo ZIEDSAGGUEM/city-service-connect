@@ -14,6 +14,10 @@ import ProviderDashboard from "./pages/ProviderDashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import HowItWorks from "./pages/HowItWorks";
 import BecomeProvider from "./pages/BecomeProvider";
 import NotFound from "./pages/NotFound";
@@ -64,6 +68,31 @@ const App = () => (
               } 
             />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route 
+              path="/forgot-password" 
+              element={
+                <GuestRoute>
+                  <ForgotPassword />
+                </GuestRoute>
+              } 
+            />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/become-provider" element={<BecomeProvider />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
