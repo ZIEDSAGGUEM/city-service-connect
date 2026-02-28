@@ -9,28 +9,45 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, SlidersHorizontal, X, Loader2 } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, X, Loader2 } from 'lucide-react';
 import { providersApi, categoriesApi } from '@/lib/api';
-import type { Provider, Category } from '@/lib/types';
+import type { Provider, Category, SearchProvidersFilters } from '@/lib/types';
 import { toast } from 'sonner';
 
 export default function Services() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Data states
   const [providers, setProviders] = useState<Provider[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter states
+  // Filter states — initialised from URL params
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [locationQuery, setLocationQuery] = useState(searchParams.get('location') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
   const [sortBy, setSortBy] = useState('rating');
   const [priceRange, setPriceRange] = useState([0, 150]);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+
+  // Debounced search inputs
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  const [debouncedLocation, setDebouncedLocation] = useState(locationQuery);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const locationTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    searchTimerRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    locationTimerRef.current = setTimeout(() => setDebouncedLocation(locationQuery), 400);
+    return () => clearTimeout(locationTimerRef.current);
+  }, [locationQuery]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -46,23 +63,27 @@ export default function Services() {
     fetchCategories();
   }, []);
 
-  // Debounced price range to avoid excessive API calls while dragging slider
+  // Debounced price range
   const [debouncedPriceRange, setDebouncedPriceRange] = useState(priceRange);
   const priceTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    priceTimerRef.current = setTimeout(() => {
-      setDebouncedPriceRange(priceRange);
-    }, 400);
+    priceTimerRef.current = setTimeout(() => setDebouncedPriceRange(priceRange), 400);
     return () => clearTimeout(priceTimerRef.current);
   }, [priceRange[0], priceRange[1]]);
 
-  // Fetch providers based on filters
+  // Fetch providers from backend whenever filters change
   const fetchProviders = useCallback(async () => {
     setIsLoading(true);
     try {
-      const filters: any = {};
+      const filters: SearchProvidersFilters = {};
 
+      if (debouncedSearch.trim()) {
+        filters.q = debouncedSearch.trim();
+      }
+      if (debouncedLocation.trim()) {
+        filters.location = debouncedLocation.trim();
+      }
       if (selectedCategory && selectedCategory !== 'all') {
         filters.categoryId = selectedCategory;
       }
@@ -84,33 +105,15 @@ export default function Services() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCategory, debouncedPriceRange, availableOnly, verifiedOnly]);
+  }, [debouncedSearch, debouncedLocation, selectedCategory, debouncedPriceRange, availableOnly, verifiedOnly]);
 
   useEffect(() => {
     fetchProviders();
   }, [fetchProviders]);
 
-  const filteredProviders = useMemo(() => {
-    let result = [...providers];
-
-    // Search filter (client-side for responsiveness)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        p =>
-          p.user?.name.toLowerCase().includes(query) ||
-          p.category?.name.toLowerCase().includes(query) ||
-          p.skills.some(s => s.toLowerCase().includes(query)) ||
-          p.bio?.toLowerCase().includes(query)
-      );
-    }
-
-    // Price filter (client-side refine)
-    result = result.filter(
-      p => p.hourlyRate >= priceRange[0] && p.hourlyRate <= priceRange[1]
-    );
-
-    // Sorting
+  // Sort client-side (backend already filtered)
+  const sortedProviders = useMemo(() => {
+    const result = [...providers];
     switch (sortBy) {
       case 'rating':
         result.sort((a, b) => b.rating - a.rating);
@@ -128,9 +131,8 @@ export default function Services() {
         result.sort((a, b) => b.completedJobs - a.completedJobs);
         break;
     }
-
     return result;
-  }, [providers, searchQuery, priceRange, sortBy]);
+  }, [providers, sortBy]);
 
   const handleClearFilters = () => {
     setSelectedCategory('all');
@@ -138,8 +140,19 @@ export default function Services() {
     setAvailableOnly(false);
     setVerifiedOnly(false);
     setSearchQuery('');
+    setLocationQuery('');
     setSortBy('rating');
+    setSearchParams({});
   };
+
+  // Sync URL params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('q', searchQuery);
+    if (locationQuery) params.set('location', locationQuery);
+    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
+    setSearchParams(params, { replace: true });
+  }, [searchQuery, locationQuery, selectedCategory, setSearchParams]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
@@ -148,14 +161,26 @@ export default function Services() {
       <main className="flex-1 container py-8">
         {/* Search and Filters Header */}
         <div className="flex flex-col gap-4 mb-8">
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            {/* Name / Service search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search providers by name, service, or skills..."
+                placeholder="Search by name, service, or skills..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {/* Location search */}
+            <div className="flex-1 relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Location..."
+                value={locationQuery}
+                onChange={(e) => setLocationQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -266,12 +291,14 @@ export default function Services() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">
-              {selectedCategory === 'all' 
-                ? 'All Service Providers' 
-                : `${categories.find(c => c.id === selectedCategory)?.name} Providers`}
+              {selectedCategory === 'all'
+                ? 'All Service Providers'
+                : `${categories.find((c) => c.id === selectedCategory)?.name || ''} Providers`}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {isLoading ? 'Loading...' : `${filteredProviders.length} provider${filteredProviders.length !== 1 ? 's' : ''} found`}
+              {isLoading
+                ? 'Loading...'
+                : `${sortedProviders.length} provider${sortedProviders.length !== 1 ? 's' : ''} found`}
             </p>
           </div>
         </div>
@@ -284,7 +311,7 @@ export default function Services() {
               <p className="text-lg text-muted-foreground">Loading providers...</p>
             </div>
           </div>
-        ) : filteredProviders.length === 0 ? (
+        ) : sortedProviders.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="h-12 w-12 text-primary" />
@@ -299,7 +326,7 @@ export default function Services() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProviders.map((provider) => (
+            {sortedProviders.map((provider) => (
               <ProviderCard key={provider.id} provider={provider} />
             ))}
           </div>

@@ -99,6 +99,7 @@ export interface UpdateProviderDto {
 }
 
 export interface SearchProvidersFilters {
+  q?: string;
   categoryId?: string;
   minRating?: number;
   maxHourlyRate?: number;

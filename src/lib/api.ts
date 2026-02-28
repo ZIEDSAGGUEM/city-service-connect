@@ -77,6 +77,7 @@ export const providersApi = {
   search: async (filters?: SearchProvidersFilters): Promise<Provider[]> => {
     const params = new URLSearchParams();
     if (filters) {
+      if (filters.q) params.append('q', filters.q);
       if (filters.categoryId) params.append('categoryId', filters.categoryId);
       if (filters.minRating) params.append('minRating', filters.minRating.toString());
       if (filters.maxHourlyRate) params.append('maxHourlyRate', filters.maxHourlyRate.toString());
