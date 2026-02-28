@@ -1,19 +1,7 @@
 import { authApi } from './api';
+import type { User, UserRole } from './types';
 
-export type UserRole = 'CLIENT' | 'PROVIDER';
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  avatar?: string | null;
-  phone?: string | null;
-  location?: string | null;
-  verified: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+export type { User, UserRole };
 
 export interface AuthResponse {
   user: User;

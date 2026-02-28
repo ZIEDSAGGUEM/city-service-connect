@@ -135,6 +135,14 @@ export default function ProviderDashboard() {
     }
   };
 
+  const requestStatusConfig: Record<RequestStatus, { label: string; color: string; icon: any }> = {
+    PENDING: { label: 'Pending', color: 'bg-warning/20 text-warning', icon: Clock },
+    ACCEPTED: { label: 'Accepted', color: 'bg-success/20 text-success', icon: CheckCircle },
+    IN_PROGRESS: { label: 'In Progress', color: 'bg-primary/20 text-primary', icon: Loader2 },
+    COMPLETED: { label: 'Completed', color: 'bg-success/20 text-success', icon: CheckCircle },
+    CANCELLED: { label: 'Cancelled', color: 'bg-destructive/20 text-destructive', icon: AlertCircle },
+  };
+
   const handleProfileSuccess = () => {
     setShowEditForm(false);
     fetchProvider();
@@ -364,15 +372,7 @@ export default function ProviderDashboard() {
                       ) : (
                         <div className="space-y-4">
                           {requests.map((request) => {
-                            const statusConfig: Record<RequestStatus, { label: string; color: string; icon: any }> = {
-                              PENDING: { label: 'Pending', color: 'bg-warning/20 text-warning', icon: Clock },
-                              ACCEPTED: { label: 'Accepted', color: 'bg-success/20 text-success', icon: CheckCircle },
-                              IN_PROGRESS: { label: 'In Progress', color: 'bg-primary/20 text-primary', icon: Loader2 },
-                              COMPLETED: { label: 'Completed', color: 'bg-success/20 text-success', icon: CheckCircle },
-                              CANCELLED: { label: 'Cancelled', color: 'bg-destructive/20 text-destructive', icon: AlertCircle },
-                            };
-                            
-                            const config = statusConfig[request.status];
+                            const config = requestStatusConfig[request.status];
                             const StatusIcon = config.icon;
 
                             return (

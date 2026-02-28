@@ -29,8 +29,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const requestUrl = error.config?.url || '';
       localStorage.removeItem('access_token');
-      window.location.href = '/login';
+      // Skip redirect for the initial auth check — AuthContext handles it gracefully
+      if (!requestUrl.includes('/auth/me')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

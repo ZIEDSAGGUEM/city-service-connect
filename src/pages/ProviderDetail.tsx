@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, Shield, Clock, MapPin, Briefcase, Loader2, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Star, Shield, Clock, MapPin, Briefcase, Loader2, MessageSquare, ArrowLeft, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { providersApi, reviewsApi } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';

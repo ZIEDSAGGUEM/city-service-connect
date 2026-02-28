@@ -16,7 +16,7 @@ export default function Register() {
     name: '',
     email: '',
     password: '',
-    role: 'client' as UserRole,
+    role: 'CLIENT' as UserRole,
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export default function Register() {
         email: formData.email,
         password: formData.password,
         name: formData.name,
-        role: formData.role.toUpperCase() as UserRole,
+        role: formData.role,
       });
 
       toast.success('Account created!', {
@@ -49,7 +49,7 @@ export default function Register() {
       navigate('/login');
     } catch (error: any) {
       toast.error('Registration failed', {
-        description: error.message || 'Please try again.',
+        description: error.response?.data?.message || error.message || 'Please try again.',
       });
     } finally {
       setIsLoading(false);
@@ -109,24 +109,24 @@ export default function Register() {
                 <Label
                   htmlFor="client"
                   className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    formData.role === 'client'
+                    formData.role === 'CLIENT'
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="client" id="client" className="sr-only" />
+                  <RadioGroupItem value="CLIENT" id="client" className="sr-only" />
                   <User className="h-5 w-5" />
                   <span className="font-medium">Find Services</span>
                 </Label>
                 <Label
                   htmlFor="provider"
                   className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    formData.role === 'provider'
+                    formData.role === 'PROVIDER'
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="provider" id="provider" className="sr-only" />
+                  <RadioGroupItem value="PROVIDER" id="provider" className="sr-only" />
                   <MapPin className="h-5 w-5" />
                   <span className="font-medium">Offer Services</span>
                 </Label>

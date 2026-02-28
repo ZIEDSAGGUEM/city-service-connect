@@ -12,10 +12,8 @@ export default function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendResetEmail = async () => {
     setIsLoading(true);
-
     try {
       await authApi.requestPasswordReset(email);
       setEmailSent(true);
@@ -30,6 +28,11 @@ export default function ForgotPassword() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendResetEmail();
   };
 
   return (
@@ -110,10 +113,7 @@ export default function ForgotPassword() {
                 <p className="text-sm text-muted-foreground">
                   Didn't receive the email?{' '}
                   <button
-                    onClick={() => {
-                      setEmailSent(false);
-                      handleSubmit(new Event('submit') as any);
-                    }}
+                    onClick={() => sendResetEmail()}
                     className="text-primary font-medium hover:underline"
                   >
                     Resend

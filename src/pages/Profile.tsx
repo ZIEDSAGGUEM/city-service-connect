@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export default function Profile() {
   const { user } = useAuth();
@@ -165,7 +166,7 @@ export default function Profile() {
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="joined"
-                        value="N/A"
+                        value={user?.createdAt ? format(new Date(user.createdAt), 'MMMM d, yyyy') : 'N/A'}
                         disabled
                         className="pl-10 bg-muted"
                       />

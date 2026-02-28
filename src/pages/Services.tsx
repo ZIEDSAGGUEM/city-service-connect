@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -46,38 +46,49 @@ export default function Services() {
     fetchCategories();
   }, []);
 
-  // Fetch providers based on filters
+  // Debounced price range to avoid excessive API calls while dragging slider
+  const [debouncedPriceRange, setDebouncedPriceRange] = useState(priceRange);
+  const priceTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
-    const fetchProviders = async () => {
-      setIsLoading(true);
-      try {
-        const filters: any = {};
-        
-        if (selectedCategory && selectedCategory !== 'all') {
-          filters.categoryId = selectedCategory;
-        }
-        if (priceRange[1] < 150) {
-          filters.maxHourlyRate = priceRange[1];
-        }
-        if (availableOnly) {
-          filters.availability = 'AVAILABLE';
-        }
-        if (verifiedOnly) {
-          filters.verified = true;
-        }
+    priceTimerRef.current = setTimeout(() => {
+      setDebouncedPriceRange(priceRange);
+    }, 400);
+    return () => clearTimeout(priceTimerRef.current);
+  }, [priceRange[0], priceRange[1]]);
 
-        const data = await providersApi.search(filters);
-        setProviders(data);
-      } catch (error: any) {
-        console.error('Failed to fetch providers:', error);
-        toast.error('Failed to load providers');
-      } finally {
-        setIsLoading(false);
+  // Fetch providers based on filters
+  const fetchProviders = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const filters: any = {};
+
+      if (selectedCategory && selectedCategory !== 'all') {
+        filters.categoryId = selectedCategory;
       }
-    };
+      if (debouncedPriceRange[1] < 150) {
+        filters.maxHourlyRate = debouncedPriceRange[1];
+      }
+      if (availableOnly) {
+        filters.availability = 'AVAILABLE';
+      }
+      if (verifiedOnly) {
+        filters.verified = true;
+      }
 
+      const data = await providersApi.search(filters);
+      setProviders(data);
+    } catch (error: any) {
+      console.error('Failed to fetch providers:', error);
+      toast.error('Failed to load providers');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory, debouncedPriceRange, availableOnly, verifiedOnly]);
+
+  useEffect(() => {
     fetchProviders();
-  }, [selectedCategory, priceRange, availableOnly, verifiedOnly]);
+  }, [fetchProviders]);
 
   const filteredProviders = useMemo(() => {
     let result = [...providers];

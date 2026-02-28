@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bell, Mail, MessageSquare, Star, Calendar, Shield, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -230,7 +231,7 @@ export default function Settings() {
                 <div className="space-y-2">
                   <Label>Member Since</Label>
                   <p className="text-sm text-muted-foreground">
-                    N/A
+                    {user?.createdAt ? format(new Date(user.createdAt), 'MMMM d, yyyy') : 'N/A'}
                   </p>
                 </div>
               </CardContent>

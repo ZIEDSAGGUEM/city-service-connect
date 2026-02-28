@@ -240,7 +240,7 @@ export function ProviderProfileForm({ provider, onSuccess }: ProviderProfileForm
             placeholder="Add a skill (e.g., Plumbing, Pipe Fitting)"
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
           />
           <Button type="button" onClick={handleAddSkill} variant="outline">
             <Plus className="h-4 w-4" />
@@ -270,7 +270,7 @@ export function ProviderProfileForm({ provider, onSuccess }: ProviderProfileForm
             placeholder="Add a certification"
             value={newCertification}
             onChange={(e) => setNewCertification(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCertification())}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCertification())}
           />
           <Button type="button" onClick={handleAddCertification} variant="outline">
             <Plus className="h-4 w-4" />
@@ -300,7 +300,7 @@ export function ProviderProfileForm({ provider, onSuccess }: ProviderProfileForm
             placeholder="Add image URL"
             value={newPortfolioUrl}
             onChange={(e) => setNewPortfolioUrl(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddPortfolio())}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddPortfolio())}
           />
           <Button type="button" onClick={handleAddPortfolio} variant="outline">
             <Plus className="h-4 w-4" />
