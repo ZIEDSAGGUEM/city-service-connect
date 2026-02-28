@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, Star, Shield, Clock } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
 
 export function HeroSection() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,12 +17,6 @@ export function HeroSection() {
     navigate(`/services?${params.toString()}`);
   };
 
-  const stats = [
-    { icon: Star, label: '4.8 Average Rating', value: '50K+ Reviews' },
-    { icon: Shield, label: 'Verified Providers', value: '2,500+' },
-    { icon: Clock, label: 'Average Response', value: '< 1 Hour' },
-  ];
-
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-secondary/50 to-background py-16 md:py-24">
       {/* Background Pattern */}
@@ -33,12 +27,6 @@ export function HeroSection() {
 
       <div className="container">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-fade-in">
-            <Shield className="h-4 w-4" />
-            <span>Trusted by 100,000+ homeowners</span>
-          </div>
-
           {/* Heading */}
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 animate-slide-up">
             Find Trusted Local{' '}
@@ -47,8 +35,7 @@ export function HeroSection() {
 
           {/* Subheading */}
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            Connect with verified professionals for home cleaning, repairs, landscaping, and more. 
-            Quality service, guaranteed satisfaction.
+            Connect with verified professionals for home cleaning, repairs, landscaping, and more.
           </p>
 
           {/* Search Form */}
@@ -98,25 +85,6 @@ export function HeroSection() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-          {stats.map((stat, index) => (
-            <div
-              key={stat.label}
-              className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-soft animate-slide-up"
-              style={{ animationDelay: `${0.4 + index * 0.1}s` }}
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <stat.icon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </section>

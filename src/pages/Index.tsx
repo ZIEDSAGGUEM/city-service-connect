@@ -5,8 +5,6 @@ import { HeroSection } from '@/components/home/HeroSection';
 import { CategorySection } from '@/components/home/CategorySection';
 import { FeaturedProviders } from '@/components/home/FeaturedProviders';
 import { HowItWorks } from '@/components/home/HowItWorks';
-import { TestimonialsSection } from '@/components/home/TestimonialsSection';
-import { CTASection } from '@/components/home/CTASection';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 
 const Index = () => {
@@ -20,8 +18,6 @@ const Index = () => {
         <CategorySection />
         <FeaturedProviders />
         <HowItWorks />
-        <TestimonialsSection />
-        <CTASection />
       </main>
       <Footer />
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
