@@ -248,6 +248,37 @@ export interface SendMessageDto {
   content: string;
 }
 
+// Favorite Types
+export interface Favorite {
+  id: string;
+  userId: string;
+  providerId: string;
+  createdAt: string;
+  provider?: Provider;
+}
+
+// Notification Types
+export type NotificationType =
+  | 'REQUEST_NEW'
+  | 'REQUEST_ACCEPTED'
+  | 'REQUEST_DECLINED'
+  | 'REQUEST_STARTED'
+  | 'REQUEST_COMPLETED'
+  | 'REQUEST_CANCELLED'
+  | 'NEW_MESSAGE'
+  | 'NEW_REVIEW';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data?: any;
+  read: boolean;
+  createdAt: string;
+}
+
 // AI Chat Types
 export interface AiChatMessage {
   role: 'user' | 'assistant';

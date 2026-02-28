@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -234,6 +234,40 @@ export const messagesApi = {
   getConversation: async (requestId: string): Promise<Message[]> => {
     const response = await api.get(`/messages/request/${requestId}`);
     return response.data;
+  },
+};
+
+// Favorites API
+export const favoritesApi = {
+  toggle: async (providerId: string): Promise<{ favorited: boolean }> => {
+    const response = await api.post(`/favorites/${providerId}`);
+    return response.data;
+  },
+  getMyFavorites: async (): Promise<Favorite[]> => {
+    const response = await api.get('/favorites');
+    return response.data;
+  },
+  check: async (providerId: string): Promise<{ favorited: boolean }> => {
+    const response = await api.get(`/favorites/check/${providerId}`);
+    return response.data;
+  },
+};
+
+// Notifications API
+export const notificationsApi = {
+  getAll: async (): Promise<Notification[]> => {
+    const response = await api.get('/notifications');
+    return response.data;
+  },
+  getUnreadCount: async (): Promise<{ count: number }> => {
+    const response = await api.get('/notifications/unread-count');
+    return response.data;
+  },
+  markAsRead: async (id: string): Promise<void> => {
+    await api.put(`/notifications/${id}/read`);
+  },
+  markAllAsRead: async (): Promise<void> => {
+    await api.put('/notifications/read-all');
   },
 };
 

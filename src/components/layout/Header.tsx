@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, X, MapPin, User, LogOut, Settings, LayoutDashboard, Bot, MessageSquare } from 'lucide-react';
+import { Menu, X, MapPin, User, LogOut, Settings, LayoutDashboard, Bot, MessageSquare, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface HeaderProps {
   onOpenAI?: () => void;
@@ -72,6 +73,8 @@ export function Header({ onOpenAI }: HeaderProps) {
           </Button>
 
           {isAuthenticated && user ? (
+            <>
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -127,6 +130,7 @@ export function Header({ onOpenAI }: HeaderProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="ghost" asChild>

@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
-import { serviceRequestsApi, reviewsApi } from '@/lib/api';
+import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, AlertCircle, Loader2, X, Heart } from 'lucide-react';
+import { serviceRequestsApi, reviewsApi, favoritesApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import type { ServiceRequest, RequestStatus } from '@/lib/types';
+import type { ServiceRequest, RequestStatus, Favorite } from '@/lib/types';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -28,11 +29,13 @@ export default function Dashboard() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
 
   useEffect(() => {
-    // Only fetch requests if user is loaded and authenticated
     if (!isAuthLoading && user) {
       fetchRequests();
+      fetchFavorites();
     } else if (!isAuthLoading && !user) {
       setIsLoading(false);
     }
@@ -50,6 +53,27 @@ export default function Dashboard() {
       toast.error('Failed to load service requests');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    setIsLoadingFavorites(true);
+    try {
+      const data = await favoritesApi.getMyFavorites();
+      setFavorites(data);
+    } catch {
+    } finally {
+      setIsLoadingFavorites(false);
+    }
+  };
+
+  const handleRemoveFavorite = async (providerId: string) => {
+    try {
+      await favoritesApi.toggle(providerId);
+      setFavorites((prev) => prev.filter((f) => f.providerId !== providerId));
+      toast.success('Removed from favorites');
+    } catch {
+      toast.error('Failed to remove from favorites');
     }
   };
 
@@ -124,7 +148,7 @@ export default function Dashboard() {
     { label: 'Active Requests', value: activeRequests.length, icon: Clock },
     { label: 'Completed Jobs', value: completedRequests.length, icon: CheckCircle },
     { label: 'Total Spent', value: `$${totalSpent.toFixed(2)}`, icon: DollarSign },
-    { label: 'Favorites', value: 0, icon: Star },
+    { label: 'Favorites', value: favorites.length, icon: Heart },
   ];
 
   return (
@@ -345,21 +369,68 @@ export default function Dashboard() {
             </TabsContent>
 
             <TabsContent value="favorites" className="space-y-4">
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Favorites Yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Start adding your favorite providers to easily book them again
-                  </p>
-                  <Button variant="hero" asChild>
-                    <Link to="/services">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Browse Providers
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              {isLoadingFavorites ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : favorites.length === 0 ? (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Favorites Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Start adding your favorite providers to easily book them again
+                    </p>
+                    <Button variant="hero" asChild>
+                      <Link to="/services">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Browse Providers
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                favorites.map((fav) => (
+                  <Card key={fav.id} className="animate-slide-up">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between gap-4">
+                        <Link to={`/providers/${fav.providerId}`} className="flex items-center gap-4 flex-1 min-w-0">
+                          <Avatar className="h-14 w-14 flex-shrink-0 border-2 border-primary/20">
+                            <AvatarImage src={fav.provider?.user?.avatar || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {fav.provider?.user?.name?.charAt(0) || 'P'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-foreground truncate">{fav.provider?.user?.name}</h3>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {fav.provider?.category?.name} • ${fav.provider?.hourlyRate}/hr
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Star className="h-4 w-4 fill-accent text-accent" />
+                              <span className="text-sm font-medium">{fav.provider?.rating?.toFixed(1)}</span>
+                              <span className="text-xs text-muted-foreground">({fav.provider?.reviewCount} reviews)</span>
+                            </div>
+                          </div>
+                        </Link>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button variant="hero" size="sm" asChild>
+                            <Link to={`/providers/${fav.providerId}`}>View</Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleRemoveFavorite(fav.providerId)}
+                          >
+                            <Heart className="h-4 w-4 fill-current" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </TabsContent>
           </Tabs>
         </div>

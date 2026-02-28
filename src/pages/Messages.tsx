@@ -7,16 +7,24 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Send, MessageSquare, Search, ArrowLeft } from 'lucide-react';
-import { messagesApi } from '@/lib/api';
+import { messagesApi, serviceRequestsApi } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSocketContext } from '@/contexts/SocketContext';
 import type { Message, ConversationSummary } from '@/lib/types';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+interface ChatHeaderInfo {
+  name: string;
+  avatar: string | null;
+  title: string;
+}
+
 export default function Messages() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { on, emit, connected } = useSocketContext();
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -28,58 +36,126 @@ export default function Messages() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // For new conversations not yet in the conversation list
+  const [headerOverride, setHeaderOverride] = useState<ChatHeaderInfo | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load conversations
   const loadConversations = useCallback(async () => {
     try {
       const data = await messagesApi.getConversations();
       setConversations(data);
-    } catch (error) {
-      console.error('Failed to load conversations', error);
+    } catch {
     } finally {
       setIsLoadingConversations(false);
     }
   }, []);
 
-  // Load messages for selected conversation
-  const loadMessages = useCallback(async (requestId: string, silent = false) => {
-    if (!silent) setIsLoadingMessages(true);
+  const loadMessages = useCallback(async (requestId: string) => {
+    setIsLoadingMessages(true);
     try {
       const data = await messagesApi.getConversation(requestId);
-      // Only update state if there are new messages (avoids scroll flicker on polling)
-      setMessages((prev) => {
-        if (prev.length === data.length && prev[prev.length - 1]?.id === data[data.length - 1]?.id) {
-          return prev; // No change — keep existing reference
-        }
-        return data;
-      });
-    } catch (error) {
-      console.error('Failed to load messages', error);
+      setMessages(data);
+    } catch (error: any) {
+      console.error('Failed to load messages:', error?.response?.status, error?.response?.data);
     } finally {
-      if (!silent) setIsLoadingMessages(false);
+      setIsLoadingMessages(false);
     }
   }, []);
 
-  // Polling: re-fetch messages every 5 seconds when a conversation is open
-  useEffect(() => {
-    if (selectedRequestId) {
-      loadMessages(selectedRequestId);
-      pollingRef.current = setInterval(() => {
-        loadMessages(selectedRequestId, true); // silent = no loading spinner
-        loadConversations();
-      }, 5000);
+  // When a requestId is selected but NOT in the conversations list,
+  // fetch request details so we can show the header.
+  const loadRequestHeader = useCallback(async (requestId: string) => {
+    try {
+      const req = await serviceRequestsApi.getById(requestId);
+      const isClient = req.clientId === user?.id;
+      const other = isClient
+        ? { name: req.provider?.user?.name || 'Provider', avatar: req.provider?.user?.avatar || null }
+        : { name: req.client?.name || 'Client', avatar: req.client?.avatar || null };
+      setHeaderOverride({ name: other.name, avatar: other.avatar, title: req.title });
+    } catch {
     }
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, [selectedRequestId, loadMessages, loadConversations]);
+  }, [user?.id]);
 
+  // Load conversations on mount
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  // Join/leave conversation rooms + load messages
+  useEffect(() => {
+    if (!selectedRequestId) return;
+
+    loadMessages(selectedRequestId);
+    emit('joinConversation', { requestId: selectedRequestId });
+
+    return () => {
+      emit('leaveConversation', { requestId: selectedRequestId });
+    };
+  }, [selectedRequestId, loadMessages, emit]);
+
+  // If selectedRequestId doesn't exist in conversations, fetch header from request
+  useEffect(() => {
+    if (!selectedRequestId || !user) return;
+
+    const existing = conversations.find((c) => c.requestId === selectedRequestId);
+    if (existing) {
+      setHeaderOverride(null);
+    } else {
+      loadRequestHeader(selectedRequestId);
+    }
+  }, [selectedRequestId, conversations, user, loadRequestHeader]);
+
+  // Real-time: listen for new messages
+  useEffect(() => {
+    const unsub = on('newMessage', (message: Message) => {
+      if (message.requestId === selectedRequestId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          // Remove temp messages from the same sender
+          const filtered = prev.filter(
+            (m) => !(m.id.startsWith('temp-') && m.senderId === message.senderId),
+          );
+          return [...filtered, message];
+        });
+      }
+      loadConversations();
+    });
+    return unsub;
+  }, [on, selectedRequestId, loadConversations]);
+
+  // Real-time: typing indicators
+  useEffect(() => {
+    const unsub = on('userTyping', (data: { requestId: string; userId: string }) => {
+      if (data.requestId === selectedRequestId && data.userId !== user?.id) {
+        setTypingUser(data.userId);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => setTypingUser(null), 2000);
+      }
+    });
+    return unsub;
+  }, [on, selectedRequestId, user?.id]);
+
+  // Fallback polling when socket is NOT connected
+  useEffect(() => {
+    if (connected || !selectedRequestId) return;
+    const interval = setInterval(() => {
+      messagesApi.getConversation(selectedRequestId).then((data) => {
+        setMessages((prev) => {
+          if (
+            prev.length === data.length &&
+            prev[prev.length - 1]?.id === data[data.length - 1]?.id
+          )
+            return prev;
+          return data;
+        });
+      }).catch(() => {});
+      loadConversations();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [connected, selectedRequestId, loadConversations]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -98,15 +174,17 @@ export default function Messages() {
   const handleSelectConversation = (requestId: string) => {
     setSelectedRequestId(requestId);
     setMessages([]);
+    setHeaderOverride(null);
   };
 
+  // ALWAYS send via REST API (reliable), WS broadcasts to all participants
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedRequestId || isSending) return;
 
-    setIsSending(true);
     const content = newMessage.trim();
     setNewMessage('');
+    setIsSending(true);
 
     // Optimistic update
     const optimistic: Message = {
@@ -124,8 +202,16 @@ export default function Messages() {
       const sent = await messagesApi.send({ requestId: selectedRequestId, content });
       // Replace optimistic with real message
       setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? sent : m)));
-      loadConversations(); // refresh conversation list
-    } catch (error: any) {
+      loadConversations();
+
+      // Also broadcast via WS so the other party gets it in real-time
+      if (connected) {
+        // The backend REST endpoint already saved the message. We just need to notify
+        // the other party in the room. The backend gateway doesn't know about REST-sent messages,
+        // so we emit a custom event.
+        emit('notifyNewMessage', { requestId: selectedRequestId, message: sent });
+      }
+    } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       toast.error('Failed to send message');
     } finally {
@@ -133,31 +219,49 @@ export default function Messages() {
     }
   };
 
-  const selectedConversation = conversations.find(
-    (c) => c.requestId === selectedRequestId,
-  );
+  const handleTyping = () => {
+    if (selectedRequestId && connected) {
+      emit('typing', { requestId: selectedRequestId });
+    }
+  };
 
-  const filteredConversations = conversations.filter((c) =>
-    c.otherParty.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.requestTitle.toLowerCase().includes(searchQuery.toLowerCase()),
+  // Resolve header from conversation list or override
+  const selectedConversation = conversations.find((c) => c.requestId === selectedRequestId);
+  const chatHeader: ChatHeaderInfo | null = selectedConversation
+    ? {
+        name: selectedConversation.otherParty.name,
+        avatar: selectedConversation.otherParty.avatar,
+        title: selectedConversation.requestTitle,
+      }
+    : headerOverride;
+
+  const filteredConversations = conversations.filter(
+    (c) =>
+      c.otherParty.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.requestTitle.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
     <Layout>
       <div className="container max-w-6xl py-6">
-        <h1 className="font-display text-2xl font-bold text-foreground mb-6">
-          Messages
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="font-display text-2xl font-bold text-foreground">Messages</h1>
+          {connected && (
+            <Badge variant="outline" className="text-xs text-success border-success/30">
+              <div className="h-1.5 w-1.5 rounded-full bg-success mr-1.5" />
+              Live
+            </Badge>
+          )}
+        </div>
 
         <div className="border border-border rounded-xl overflow-hidden flex h-[calc(100vh-220px)] min-h-[500px] shadow-sm">
-          {/* ─── Left: Conversation List ─── */}
+          {/* Left: Conversation List */}
           <div
             className={cn(
               'w-full md:w-80 flex-shrink-0 border-r border-border flex flex-col bg-background',
               selectedRequestId ? 'hidden md:flex' : 'flex',
             )}
           >
-            {/* Search */}
             <div className="p-3 border-b border-border">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -170,7 +274,6 @@ export default function Messages() {
               </div>
             </div>
 
-            {/* Conversation Items */}
             <ScrollArea className="flex-1">
               {isLoadingConversations ? (
                 <div className="flex items-center justify-center h-32">
@@ -191,7 +294,8 @@ export default function Messages() {
                     onClick={() => handleSelectConversation(conv.requestId)}
                     className={cn(
                       'w-full flex items-start gap-3 p-4 text-left hover:bg-secondary/50 transition-colors border-b border-border/50',
-                      selectedRequestId === conv.requestId && 'bg-primary/5 border-l-2 border-l-primary',
+                      selectedRequestId === conv.requestId &&
+                        'bg-primary/5 border-l-2 border-l-primary',
                     )}
                   >
                     <Avatar className="h-10 w-10 flex-shrink-0">
@@ -200,7 +304,6 @@ export default function Messages() {
                         {conv.otherParty.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-sm font-medium text-foreground truncate">
@@ -208,7 +311,9 @@ export default function Messages() {
                         </span>
                         {conv.lastMessage && (
                           <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                            {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: false })}
+                            {formatDistanceToNow(new Date(conv.lastMessage.createdAt), {
+                              addSuffix: false,
+                            })}
                           </span>
                         )}
                       </div>
@@ -238,7 +343,7 @@ export default function Messages() {
             </ScrollArea>
           </div>
 
-          {/* ─── Right: Chat View ─── */}
+          {/* Right: Chat View */}
           <div
             className={cn(
               'flex-1 flex flex-col bg-background',
@@ -246,7 +351,6 @@ export default function Messages() {
             )}
           >
             {!selectedRequestId ? (
-              /* Empty state */
               <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                   <MessageSquare className="h-8 w-8 text-primary" />
@@ -270,23 +374,26 @@ export default function Messages() {
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
-                  {selectedConversation && (
+                  {chatHeader ? (
                     <>
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={selectedConversation.otherParty.avatar ?? undefined} />
+                        <AvatarImage src={chatHeader.avatar ?? undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {selectedConversation.otherParty.name.charAt(0).toUpperCase()}
+                          {chatHeader.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          {selectedConversation.otherParty.name}
-                        </p>
+                        <p className="text-sm font-semibold text-foreground">{chatHeader.name}</p>
                         <p className="text-xs text-muted-foreground truncate max-w-xs">
-                          {selectedConversation.requestTitle}
+                          {typingUser ? 'Typing...' : chatHeader.title}
                         </p>
                       </div>
                     </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Loading...</span>
+                    </div>
                   )}
                 </div>
 
@@ -310,10 +417,8 @@ export default function Messages() {
                           index === 0 ||
                           new Date(msg.createdAt).toDateString() !==
                             new Date(messages[index - 1].createdAt).toDateString();
-
                         return (
                           <div key={msg.id}>
-                            {/* Date separator */}
                             {showDate && (
                               <div className="flex items-center justify-center my-3">
                                 <div className="bg-secondary/60 text-xs text-muted-foreground px-3 py-1 rounded-full">
@@ -321,14 +426,12 @@ export default function Messages() {
                                 </div>
                               </div>
                             )}
-
                             <div
                               className={cn(
                                 'flex items-end gap-2',
                                 isMe ? 'flex-row-reverse' : 'flex-row',
                               )}
                             >
-                              {/* Avatar */}
                               {!isMe && (
                                 <Avatar className="h-7 w-7 flex-shrink-0 mb-1">
                                   <AvatarImage src={msg.sender?.avatar ?? undefined} />
@@ -337,8 +440,6 @@ export default function Messages() {
                                   </AvatarFallback>
                                 </Avatar>
                               )}
-
-                              {/* Bubble */}
                               <div
                                 className={cn(
                                   'max-w-[70%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
@@ -351,7 +452,9 @@ export default function Messages() {
                                 <p
                                   className={cn(
                                     'text-xs mt-1',
-                                    isMe ? 'text-primary-foreground/70 text-right' : 'text-muted-foreground',
+                                    isMe
+                                      ? 'text-primary-foreground/70 text-right'
+                                      : 'text-muted-foreground',
                                   )}
                                 >
                                   {format(new Date(msg.createdAt), 'h:mm a')}
@@ -373,7 +476,10 @@ export default function Messages() {
                 >
                   <Input
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                      handleTyping();
+                    }}
                     placeholder="Type a message..."
                     className="flex-1"
                     disabled={isSending}
@@ -384,11 +490,7 @@ export default function Messages() {
                       }
                     }}
                   />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    disabled={!newMessage.trim() || isSending}
-                  >
+                  <Button type="submit" size="icon" disabled={!newMessage.trim() || isSending}>
                     {isSending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -404,4 +506,3 @@ export default function Messages() {
     </Layout>
   );
 }
-

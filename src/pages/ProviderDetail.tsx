@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, Shield, Clock, MapPin, Briefcase, Loader2, MessageSquare, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Star, Shield, Clock, MapPin, Briefcase, Loader2, MessageSquare, ArrowLeft, CheckCircle, Heart } from 'lucide-react';
 import { toast } from 'sonner';
-import { providersApi, reviewsApi } from '@/lib/api';
+import { providersApi, reviewsApi, favoritesApi } from '@/lib/api';
 import type { Provider, Review } from '@/lib/types';
 import { BookingRequestDialog } from '@/components/service-requests/BookingRequestDialog';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,8 @@ export default function ProviderDetail() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isTogglingFav, setIsTogglingFav] = useState(false);
 
   // Fetch provider data
   useEffect(() => {
@@ -44,6 +46,26 @@ export default function ProviderDetail() {
 
     fetchProvider();
   }, [id]);
+
+  // Check favorite status
+  useEffect(() => {
+    if (!id || !user) return;
+    favoritesApi.check(id).then((data) => setIsFavorited(data.favorited)).catch(() => {});
+  }, [id, user]);
+
+  const handleToggleFavorite = async () => {
+    if (!id || isTogglingFav) return;
+    setIsTogglingFav(true);
+    try {
+      const result = await favoritesApi.toggle(id);
+      setIsFavorited(result.favorited);
+      toast.success(result.favorited ? 'Added to favorites' : 'Removed from favorites');
+    } catch {
+      toast.error('Failed to update favorites');
+    } finally {
+      setIsTogglingFav(false);
+    }
+  };
 
   // Fetch reviews
   useEffect(() => {
@@ -330,15 +352,26 @@ export default function ProviderDetail() {
             <div className="bg-card rounded-2xl shadow-soft p-6 sticky top-8">
               {user?.role === 'CLIENT' ? (
                 <>
-                  <Button 
-                    size="lg" 
-                    className="w-full mb-4" 
-                    variant="hero"
-                    onClick={() => setIsRequestOpen(true)}
-                  >
-                    <MessageSquare className="h-5 w-5 mr-2" />
-                    Request Service
-                  </Button>
+                  <div className="flex gap-2 mb-4">
+                    <Button 
+                      size="lg" 
+                      className="flex-1" 
+                      variant="hero"
+                      onClick={() => setIsRequestOpen(true)}
+                    >
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Request Service
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={handleToggleFavorite}
+                      disabled={isTogglingFav}
+                      className={isFavorited ? 'text-destructive border-destructive/30' : ''}
+                    >
+                      <Heart className={`h-5 w-5 ${isFavorited ? 'fill-current' : ''}`} />
+                    </Button>
+                  </div>
                   <BookingRequestDialog
                     isOpen={isRequestOpen}
                     onClose={() => setIsRequestOpen(false)}
