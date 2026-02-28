@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AIAssistant } from '@/components/ai/AIAssistant';
@@ -9,10 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ProviderProfileForm } from '@/components/providers/ProviderProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { providersApi, serviceRequestsApi } from '@/lib/api';
-import type { Provider, ServiceRequest, RequestStatus } from '@/lib/types';
-import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import type { Provider, ServiceRequest, RequestStatus, ProviderAnalytics } from '@/lib/types';
+import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp, Clock, CheckCircle, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function ProviderDashboard() {
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -22,6 +23,8 @@ export default function ProviderDashboard() {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<ProviderAnalytics | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const { user } = useAuth();
 
   // Fetch provider profile
@@ -53,6 +56,18 @@ export default function ProviderDashboard() {
     }
   };
 
+  const fetchAnalytics = useCallback(async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      const data = await providersApi.getAnalytics();
+      setAnalytics(data);
+    } catch {
+      console.error('Failed to fetch analytics');
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProvider();
   }, []);
@@ -60,6 +75,7 @@ export default function ProviderDashboard() {
   useEffect(() => {
     if (provider) {
       fetchRequests();
+      fetchAnalytics();
     }
   }, [provider]);
 
@@ -495,14 +511,194 @@ export default function ProviderDashboard() {
                     </TabsContent>
 
                     {/* Analytics Tab */}
-                    <TabsContent value="analytics">
-                      <div className="text-center py-12">
-                        <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">Analytics & Insights</h3>
-                        <p className="text-muted-foreground">
-                          Analytics dashboard coming soon!
-                        </p>
-                      </div>
+                    <TabsContent value="analytics" className="space-y-6">
+                      {isLoadingAnalytics ? (
+                        <div className="flex justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : analytics ? (
+                        <>
+                          {/* Summary Cards */}
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                    <DollarSign className="h-5 w-5 text-green-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Total Earnings</p>
+                                    <p className="text-2xl font-bold">${analytics.totalEarnings.toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            <Card>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <Briefcase className="h-5 w-5 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Total Requests</p>
+                                    <p className="text-2xl font-bold">{analytics.totalRequests}</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            <Card>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                                    <Star className="h-5 w-5 text-yellow-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Avg Rating</p>
+                                    <p className="text-2xl font-bold">{provider.rating.toFixed(1)}</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            <Card>
+                              <CardContent className="pt-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-lg bg-pink-100 flex items-center justify-center">
+                                    <Heart className="h-5 w-5 text-pink-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Favorited By</p>
+                                    <p className="text-2xl font-bold">{analytics.favoritesCount}</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          {/* Request Status Breakdown */}
+                          <div className="grid grid-cols-5 gap-3">
+                            {Object.entries(analytics.statusCounts).map(([status, count]) => {
+                              const cfg = requestStatusConfig[status as RequestStatus];
+                              return (
+                                <div key={status} className={`rounded-lg p-3 text-center ${cfg?.color || 'bg-muted'}`}>
+                                  <p className="text-2xl font-bold">{count}</p>
+                                  <p className="text-xs font-medium">{cfg?.label || status}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Charts Row */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Monthly Jobs Chart */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-base">Jobs (Last 6 Months)</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <ResponsiveContainer width="100%" height={250}>
+                                  <BarChart data={analytics.monthlyChart}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="month" fontSize={12} />
+                                    <YAxis fontSize={12} allowDecimals={false} />
+                                    <Tooltip />
+                                    <Bar dataKey="jobs" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </CardContent>
+                            </Card>
+
+                            {/* Monthly Earnings Chart */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-base">Earnings (Last 6 Months)</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <ResponsiveContainer width="100%" height={250}>
+                                  <BarChart data={analytics.monthlyChart}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="month" fontSize={12} />
+                                    <YAxis fontSize={12} tickFormatter={(v) => `$${v}`} />
+                                    <Tooltip formatter={(value: number) => [`$${value}`, 'Earnings']} />
+                                    <Bar dataKey="earnings" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                                  </BarChart>
+                                </ResponsiveContainer>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          {/* Rating Distribution + Recent Reviews */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Rating Distribution */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-base">Rating Distribution</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="space-y-3">
+                                  {[5, 4, 3, 2, 1].map((star) => {
+                                    const count = analytics.ratingDistribution[star - 1];
+                                    const total = analytics.ratingDistribution.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? (count / total) * 100 : 0;
+                                    return (
+                                      <div key={star} className="flex items-center gap-3">
+                                        <span className="text-sm font-medium w-12 flex items-center gap-1">
+                                          {star} <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                        </span>
+                                        <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                                          <div
+                                            className="h-full bg-yellow-500 rounded-full transition-all"
+                                            style={{ width: `${pct}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-sm text-muted-foreground w-8 text-right">{count}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            {/* Recent Reviews */}
+                            <Card>
+                              <CardHeader>
+                                <CardTitle className="text-base">Recent Reviews</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                {analytics.recentReviews.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground text-center py-6">No reviews yet</p>
+                                ) : (
+                                  <div className="space-y-4">
+                                    {analytics.recentReviews.map((review) => (
+                                      <div key={review.id} className="border-b last:border-0 pb-3 last:pb-0">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <span className="font-medium text-sm">{review.client.name}</span>
+                                          <div className="flex items-center gap-0.5">
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                              <Star
+                                                key={i}
+                                                className={`h-3 w-3 ${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted'}`}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground line-clamp-2">{review.comment}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-12">
+                          <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">Failed to load analytics</p>
+                        </div>
+                      )}
                     </TabsContent>
                   </CardContent>
                 </Tabs>

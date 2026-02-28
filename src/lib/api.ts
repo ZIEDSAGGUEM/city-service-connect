@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -119,6 +119,12 @@ export const providersApi = {
   // Delete provider profile (requires auth, PROVIDER only)
   deleteProfile: async (id: string): Promise<void> => {
     await api.delete(`/providers/${id}`);
+  },
+
+  // Get analytics for the current provider
+  getAnalytics: async (): Promise<ProviderAnalytics> => {
+    const response = await api.get('/providers/me/analytics');
+    return response.data;
   },
 };
 

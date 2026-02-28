@@ -280,6 +280,24 @@ export interface Notification {
   createdAt: string;
 }
 
+// Provider Analytics Types
+export interface ProviderAnalytics {
+  totalEarnings: number;
+  totalCompletedJobs: number;
+  totalRequests: number;
+  statusCounts: Record<string, number>;
+  monthlyChart: { month: string; jobs: number; earnings: number }[];
+  ratingDistribution: number[];
+  recentReviews: {
+    id: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+    client: { name: string; avatar: string | null };
+  }[];
+  favoritesCount: number;
+}
+
 // AI Chat Types
 export interface AiChatMessage {
   role: 'user' | 'assistant';
