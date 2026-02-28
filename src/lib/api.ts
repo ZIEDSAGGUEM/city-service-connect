@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -233,6 +233,14 @@ export const messagesApi = {
   // Get all messages in a request conversation
   getConversation: async (requestId: string): Promise<Message[]> => {
     const response = await api.get(`/messages/request/${requestId}`);
+    return response.data;
+  },
+};
+
+// AI Chat API
+export const aiApi = {
+  chat: async (messages: AiChatMessage[]): Promise<AiChatResponse> => {
+    const response = await api.post('/ai/chat', { messages });
     return response.data;
   },
 };

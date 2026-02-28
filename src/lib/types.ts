@@ -248,3 +248,14 @@ export interface SendMessageDto {
   content: string;
 }
 
+// AI Chat Types
+export interface AiChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AiChatResponse {
+  message: string;
+  providers: Provider[];
+}
+
