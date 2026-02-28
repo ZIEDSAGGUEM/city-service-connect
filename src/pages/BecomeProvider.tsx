@@ -4,7 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Calendar, Users, TrendingUp, CheckCircle, ArrowRight, Star } from 'lucide-react';
+import { DollarSign, Calendar, Users, TrendingUp, CheckCircle, ArrowRight } from 'lucide-react';
 
 const benefits = [
   {
@@ -35,22 +35,6 @@ const steps = [
   { number: 3, title: 'Start Earning', description: 'Receive job requests, connect with clients, and grow your business.' },
 ];
 
-const testimonials = [
-  {
-    name: 'Marcus Williams',
-    role: 'Handyman',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-    quote: "LocalPro has transformed my business. I've doubled my client base in just 6 months.",
-    earnings: '$4,500/month avg',
-  },
-  {
-    name: 'Patricia Chen',
-    role: 'House Cleaner',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-    quote: "The flexibility is amazing. I choose my hours and the clients I want to work with.",
-    earnings: '$3,200/month avg',
-  },
-];
 
 export default function BecomeProvider() {
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -154,54 +138,6 @@ export default function BecomeProvider() {
                   <p className="text-muted-foreground">
                     {step.description}
                   </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="py-16 md:py-24">
-          <div className="container">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-                Success Stories
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Hear from providers who've grown their business with LocalPro.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {testimonials.map((testimonial) => (
-                <div
-                  key={testimonial.name}
-                  className="p-8 bg-card rounded-2xl shadow-soft"
-                >
-                  <div className="flex items-center gap-1 mb-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-accent text-accent" />
-                    ))}
-                  </div>
-                  <p className="text-lg text-foreground mb-6 italic">
-                    "{testimonial.quote}"
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={testimonial.avatar}
-                        alt={testimonial.name}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="font-medium text-foreground">{testimonial.name}</p>
-                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-success">{testimonial.earnings}</p>
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>
