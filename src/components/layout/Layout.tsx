@@ -18,3 +18,6 @@ export function Layout({ children, onOpenAI }: LayoutProps) {
   );
 }
 
+
+
+

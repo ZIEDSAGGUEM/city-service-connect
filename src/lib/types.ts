@@ -212,3 +212,39 @@ export interface CompleteServiceRequestDto {
   finalPrice?: number;
 }
 
+// Message Types
+export interface Message {
+  id: string;
+  senderId: string;
+  requestId: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+  sender?: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+}
+
+export interface ConversationSummary {
+  requestId: string;
+  requestTitle: string;
+  otherParty: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  lastMessage: {
+    content: string;
+    createdAt: string;
+    senderId: string;
+  } | null;
+  unreadCount: number;
+}
+
+export interface SendMessageDto {
+  requestId: string;
+  content: string;
+}
+

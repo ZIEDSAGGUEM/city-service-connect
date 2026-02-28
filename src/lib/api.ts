@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -202,6 +202,33 @@ export const reviewsApi = {
   // Get reviews for a provider (public)
   getProviderReviews: async (providerId: string): Promise<Review[]> => {
     const response = await api.get(`/reviews/provider/${providerId}`);
+    return response.data;
+  },
+};
+
+// Messages API
+export const messagesApi = {
+  // Send a message
+  send: async (data: SendMessageDto): Promise<Message> => {
+    const response = await api.post('/messages', data);
+    return response.data;
+  },
+
+  // Get all conversations for current user
+  getConversations: async (): Promise<ConversationSummary[]> => {
+    const response = await api.get('/messages/conversations');
+    return response.data;
+  },
+
+  // Get unread message count
+  getUnreadCount: async (): Promise<{ count: number }> => {
+    const response = await api.get('/messages/unread-count');
+    return response.data;
+  },
+
+  // Get all messages in a request conversation
+  getConversation: async (requestId: string): Promise<Message[]> => {
+    const response = await api.get(`/messages/request/${requestId}`);
     return response.data;
   },
 };

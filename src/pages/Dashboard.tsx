@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 import { serviceRequestsApi, reviewsApi } from '@/lib/api';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ServiceRequest, RequestStatus } from '@/lib/types';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const navigate = useNavigate();
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -253,6 +255,14 @@ export default function Dashboard() {
                           <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                             <Button variant="ghost" size="sm" asChild>
                               <Link to={`/providers/${request.providerId}`}>View Provider</Link>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/messages?requestId=${request.id}`)}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1" />
+                              Message
                             </Button>
                             {request.status === 'PENDING' && (
                               <Button 

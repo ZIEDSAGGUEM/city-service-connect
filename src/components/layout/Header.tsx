@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, X, MapPin, Search, User, LogOut, Settings, LayoutDashboard, Bot } from 'lucide-react';
+import { Menu, X, MapPin, User, LogOut, Settings, LayoutDashboard, Bot, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
@@ -106,6 +106,12 @@ export function Header({ onOpenAI }: HeaderProps) {
                   <Link to="/profile" className="flex items-center">
                     <User className="mr-2 h-4 w-4" />
                     Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/messages" className="flex items-center">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Messages
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

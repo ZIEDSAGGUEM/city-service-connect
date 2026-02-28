@@ -55,6 +55,8 @@ export function BookingRequestDialog({ isOpen, onClose, provider }: BookingReque
         estimatedBudget: formData.estimatedBudget ? parseFloat(formData.estimatedBudget) : undefined,
       });
 
+      console.log('✅ Request created - requestId:', request.id);
+
       toast.success('Service request sent!', {
         description: `${provider.user?.name} will review your request soon.`,
       });
