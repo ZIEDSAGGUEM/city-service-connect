@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -306,5 +306,59 @@ export const uploadsApi = {
   },
   removePortfolioImage: async (imageUrl: string): Promise<void> => {
     await api.delete('/uploads/portfolio', { data: { imageUrl } });
+  },
+};
+
+// Admin API
+export const adminApi = {
+  getDashboard: async (): Promise<AdminDashboardStats> => {
+    const response = await api.get('/admin/dashboard');
+    return response.data;
+  },
+  getUsers: async (q?: string, role?: string): Promise<AdminUser[]> => {
+    const params: any = {};
+    if (q) params.q = q;
+    if (role) params.role = role;
+    const response = await api.get('/admin/users', { params });
+    return response.data;
+  },
+  updateUserRole: async (id: string, role: string) => {
+    const response = await api.put(`/admin/users/${id}/role`, { role });
+    return response.data;
+  },
+  toggleUserVerification: async (id: string) => {
+    const response = await api.put(`/admin/users/${id}/toggle-verification`);
+    return response.data;
+  },
+  deleteUser: async (id: string) => {
+    const response = await api.delete(`/admin/users/${id}`);
+    return response.data;
+  },
+  getProviders: async (q?: string, status?: string): Promise<AdminProvider[]> => {
+    const params: any = {};
+    if (q) params.q = q;
+    if (status) params.status = status;
+    const response = await api.get('/admin/providers', { params });
+    return response.data;
+  },
+  toggleProviderVerification: async (id: string) => {
+    const response = await api.put(`/admin/providers/${id}/toggle-verification`);
+    return response.data;
+  },
+  updateProviderStatus: async (id: string, status: string) => {
+    const response = await api.put(`/admin/providers/${id}/status`, { status });
+    return response.data;
+  },
+  createCategory: async (data: { name: string; icon: string; description: string }): Promise<Category> => {
+    const response = await api.post('/admin/categories', data);
+    return response.data;
+  },
+  updateCategory: async (id: string, data: { name?: string; icon?: string; description?: string }): Promise<Category> => {
+    const response = await api.put(`/admin/categories/${id}`, data);
+    return response.data;
+  },
+  deleteCategory: async (id: string) => {
+    const response = await api.delete(`/admin/categories/${id}`);
+    return response.data;
   },
 };

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, X, MapPin, User, LogOut, Settings, LayoutDashboard, Bot, MessageSquare, Heart } from 'lucide-react';
+import { Menu, X, MapPin, User, LogOut, Settings, LayoutDashboard, Bot, MessageSquare, Heart, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 
@@ -100,9 +100,9 @@ export function Header({ onOpenAI }: HeaderProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to={user.role === 'CLIENT' ? '/dashboard' : '/provider-dashboard'} className="flex items-center">
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
+                  <Link to={user.role === 'ADMIN' ? '/admin' : user.role === 'CLIENT' ? '/dashboard' : '/provider-dashboard'} className="flex items-center">
+                    {user.role === 'ADMIN' ? <ShieldCheck className="mr-2 h-4 w-4" /> : <LayoutDashboard className="mr-2 h-4 w-4" />}
+                    {user.role === 'ADMIN' ? 'Admin Panel' : 'Dashboard'}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

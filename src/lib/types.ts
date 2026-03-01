@@ -1,5 +1,5 @@
 // User Types
-export type UserRole = 'CLIENT' | 'PROVIDER';
+export type UserRole = 'CLIENT' | 'PROVIDER' | 'ADMIN';
 
 export interface User {
   id: string;
@@ -307,5 +307,43 @@ export interface AiChatMessage {
 export interface AiChatResponse {
   message: string;
   providers: Provider[];
+}
+
+// Admin Types
+export interface AdminDashboardStats {
+  totalUsers: number;
+  totalProviders: number;
+  totalRequests: number;
+  totalRevenue: number;
+  newUsersThisMonth: number;
+  statusCounts: Record<string, number>;
+  monthlyChart: { month: string; signups: number; requests: number; revenue: number }[];
+  topCategories: { name: string; icon: string; providerCount: number }[];
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  avatar?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  role: UserRole;
+  verified: boolean;
+  createdAt: string;
+}
+
+export interface AdminProvider {
+  id: string;
+  userId: string;
+  hourlyRate: number;
+  rating: number;
+  reviewCount: number;
+  completedJobs: number;
+  verified: boolean;
+  status: ProviderStatus;
+  createdAt: string;
+  user: { id: string; name: string; email: string; avatar?: string | null };
+  category: { id: string; name: string; icon: string };
 }
 
