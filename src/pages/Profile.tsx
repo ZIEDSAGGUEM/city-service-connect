@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,20 +6,46 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Mail, Phone, MapPin, Calendar, Shield, Camera } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { uploadsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File too large', { description: 'Max size is 5MB' });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      await uploadsApi.uploadAvatar(file);
+      await refreshUser();
+      toast.success('Avatar updated');
+    } catch (error: any) {
+      toast.error('Upload failed', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
 
   const handleSave = async () => {
-    // TODO: Implement update profile API call
     toast.success('Profile updated', {
       description: 'Your profile has been updated successfully.',
     });
@@ -52,19 +78,47 @@ export default function Profile() {
                 <CardDescription>Update your profile photo</CardDescription>
               </CardHeader>
               <CardContent className="flex items-center gap-6">
-                <Avatar className="h-24 w-24 border-2 border-primary/20">
-                  <AvatarImage src={user?.avatar || undefined} alt={user?.name} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    {user?.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-24 w-24 border-2 border-primary/20">
+                    <AvatarImage src={user?.avatar || undefined} alt={user?.name} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                      {user?.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isUploadingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm">
-                    <Camera className="h-4 w-4 mr-2" />
-                    Change photo
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                  >
+                    {isUploadingAvatar ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-4 w-4 mr-2" />
+                        Change photo
+                      </>
+                    )}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    JPG, GIF or PNG. Max size of 2MB
+                    JPG, PNG, WebP or GIF. Max size 5MB
                   </p>
                 </div>
               </CardContent>

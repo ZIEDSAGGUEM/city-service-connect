@@ -285,3 +285,26 @@ export const aiApi = {
     return response.data;
   },
 };
+
+// Uploads API
+export const uploadsApi = {
+  uploadAvatar: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/uploads/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  uploadPortfolio: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/uploads/portfolio', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  removePortfolioImage: async (imageUrl: string): Promise<void> => {
+    await api.delete('/uploads/portfolio', { data: { imageUrl } });
+  },
+};

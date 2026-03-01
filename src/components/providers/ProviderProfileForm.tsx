@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { providersApi, categoriesApi } from '@/lib/api';
+import { providersApi, categoriesApi, uploadsApi } from '@/lib/api';
 import type { Provider, Category, CreateProviderDto, UpdateProviderDto } from '@/lib/types';
-import { Loader2, X, Plus } from 'lucide-react';
+import { Loader2, X, Plus, Upload } from 'lucide-react';
 
 interface ProviderProfileFormProps {
   provider?: Provider | null;
@@ -37,7 +37,8 @@ export function ProviderProfileForm({ provider, onSuccess }: ProviderProfileForm
   const [newCertification, setNewCertification] = useState('');
 
   const [portfolio, setPortfolio] = useState<string[]>(provider?.portfolio || []);
-  const [newPortfolioUrl, setNewPortfolioUrl] = useState('');
+  const [isUploadingPortfolio, setIsUploadingPortfolio] = useState(false);
+  const portfolioInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch categories
   useEffect(() => {
@@ -76,15 +77,37 @@ export function ProviderProfileForm({ provider, onSuccess }: ProviderProfileForm
     setCertifications(certifications.filter(c => c !== cert));
   };
 
-  const handleAddPortfolio = () => {
-    if (newPortfolioUrl.trim() && !portfolio.includes(newPortfolioUrl.trim())) {
-      setPortfolio([...portfolio, newPortfolioUrl.trim()]);
-      setNewPortfolioUrl('');
+  const handlePortfolioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File too large', { description: 'Max size is 10MB' });
+      return;
+    }
+
+    setIsUploadingPortfolio(true);
+    try {
+      const { url } = await uploadsApi.uploadPortfolio(file);
+      setPortfolio((prev) => [...prev, url]);
+      toast.success('Image uploaded');
+    } catch (error: any) {
+      toast.error('Upload failed', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsUploadingPortfolio(false);
+      if (portfolioInputRef.current) portfolioInputRef.current.value = '';
     }
   };
 
-  const handleRemovePortfolio = (url: string) => {
+  const handleRemovePortfolio = async (url: string) => {
     setPortfolio(portfolio.filter(p => p !== url));
+    try {
+      await uploadsApi.removePortfolioImage(url);
+    } catch {
+      // already removed from local state
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -295,16 +318,33 @@ export function ProviderProfileForm({ provider, onSuccess }: ProviderProfileForm
       {/* Portfolio */}
       <div>
         <Label>Portfolio Images (Optional)</Label>
-        <div className="flex gap-2 mt-2">
-          <Input
-            placeholder="Add image URL"
-            value={newPortfolioUrl}
-            onChange={(e) => setNewPortfolioUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddPortfolio())}
-          />
-          <Button type="button" onClick={handleAddPortfolio} variant="outline">
-            <Plus className="h-4 w-4" />
+        <input
+          ref={portfolioInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={handlePortfolioUpload}
+        />
+        <div className="mt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => portfolioInputRef.current?.click()}
+            disabled={isUploadingPortfolio}
+          >
+            {isUploadingPortfolio ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Image
+              </>
+            )}
           </Button>
+          <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP or GIF. Max 10MB per image.</p>
         </div>
         {portfolio.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
