@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider, Dispute } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -306,6 +306,36 @@ export const uploadsApi = {
   },
   removePortfolioImage: async (imageUrl: string): Promise<void> => {
     await api.delete('/uploads/portfolio', { data: { imageUrl } });
+  },
+};
+
+// Disputes API
+export const disputesApi = {
+  create: async (data: { requestId: string; reason: string; evidence?: string[] }): Promise<Dispute> => {
+    const response = await api.post('/disputes', data);
+    return response.data;
+  },
+  getClientDisputes: async (): Promise<Dispute[]> => {
+    const response = await api.get('/disputes/my');
+    return response.data;
+  },
+  getProviderDisputes: async (): Promise<Dispute[]> => {
+    const response = await api.get('/disputes/provider');
+    return response.data;
+  },
+  providerRespond: async (id: string, data: { providerResponse: string; providerEvidence?: string[] }): Promise<Dispute> => {
+    const response = await api.put(`/disputes/${id}/respond`, data);
+    return response.data;
+  },
+  adminGetAll: async (status?: string): Promise<Dispute[]> => {
+    const params: any = {};
+    if (status) params.status = status;
+    const response = await api.get('/disputes/admin', { params });
+    return response.data;
+  },
+  adminResolve: async (id: string, data: { resolution: string; adminNote?: string }): Promise<Dispute> => {
+    const response = await api.put(`/disputes/${id}/resolve`, data);
+    return response.data;
   },
 };
 

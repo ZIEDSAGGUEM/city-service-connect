@@ -11,11 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, AlertCircle, Loader2, X, Heart } from 'lucide-react';
-import { serviceRequestsApi, reviewsApi, favoritesApi } from '@/lib/api';
+import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, AlertCircle, Loader2, X, Heart, Flag } from 'lucide-react';
+import { serviceRequestsApi, reviewsApi, favoritesApi, disputesApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import type { ServiceRequest, RequestStatus, Favorite } from '@/lib/types';
+import type { ServiceRequest, RequestStatus, Favorite, Dispute } from '@/lib/types';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -31,11 +31,17 @@ export default function Dashboard() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [isLoadingDisputes, setIsLoadingDisputes] = useState(false);
+  const [disputeDialog, setDisputeDialog] = useState<{ open: boolean; request: ServiceRequest | null }>({ open: false, request: null });
+  const [disputeReason, setDisputeReason] = useState('');
+  const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
 
   useEffect(() => {
     if (!isAuthLoading && user) {
       fetchRequests();
       fetchFavorites();
+      fetchDisputes();
     } else if (!isAuthLoading && !user) {
       setIsLoading(false);
     }
@@ -74,6 +80,37 @@ export default function Dashboard() {
       toast.success('Removed from favorites');
     } catch {
       toast.error('Failed to remove from favorites');
+    }
+  };
+
+  const fetchDisputes = async () => {
+    setIsLoadingDisputes(true);
+    try {
+      const data = await disputesApi.getClientDisputes();
+      setDisputes(data);
+    } catch {
+    } finally {
+      setIsLoadingDisputes(false);
+    }
+  };
+
+  const handleOpenDisputeDialog = (request: ServiceRequest) => {
+    setDisputeDialog({ open: true, request });
+    setDisputeReason('');
+  };
+
+  const handleSubmitDispute = async () => {
+    if (!disputeDialog.request || !disputeReason.trim()) return;
+    setIsSubmittingDispute(true);
+    try {
+      await disputesApi.create({ requestId: disputeDialog.request.id, reason: disputeReason.trim() });
+      toast.success('Dispute submitted successfully');
+      setDisputeDialog({ open: false, request: null });
+      fetchDisputes();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to submit dispute');
+    } finally {
+      setIsSubmittingDispute(false);
     }
   };
 
@@ -203,6 +240,7 @@ export default function Dashboard() {
             <TabsList>
               <TabsTrigger value="active">Active Requests</TabsTrigger>
               <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="disputes">Disputes</TabsTrigger>
               <TabsTrigger value="favorites">Favorites</TabsTrigger>
             </TabsList>
 
@@ -356,6 +394,17 @@ export default function Dashboard() {
                               <Star className="h-4 w-4 mr-1" />
                               Leave Review
                             </Button>
+                            {!disputes.find((d) => d.requestId === request.id) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleOpenDisputeDialog(request)}
+                              >
+                                <Flag className="h-4 w-4 mr-1" />
+                                Dispute
+                              </Button>
+                            )}
                             <Button variant="ghost" size="sm" asChild>
                               <Link to={`/providers/${request.providerId}`}>View Provider</Link>
                             </Button>
@@ -365,6 +414,69 @@ export default function Dashboard() {
                     </Card>
                   );
                 })
+              )}
+            </TabsContent>
+
+            <TabsContent value="disputes" className="space-y-4">
+              {isLoadingDisputes ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : disputes.length === 0 ? (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Disputes</h3>
+                    <p className="text-muted-foreground">You haven't raised any disputes</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                disputes.map((dispute) => (
+                  <Card key={dispute.id}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold">{dispute.request?.title}</h3>
+                            <Badge
+                              className={
+                                dispute.status === 'OPEN'
+                                  ? 'bg-warning/20 text-warning'
+                                  : dispute.status === 'UNDER_REVIEW'
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'bg-success/20 text-success'
+                              }
+                            >
+                              {dispute.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            vs {dispute.request?.provider?.user?.name}
+                          </p>
+                          <p className="text-sm mb-2"><strong>Reason:</strong> {dispute.reason}</p>
+                          {dispute.providerResponse && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                              <strong>Provider Response:</strong> {dispute.providerResponse}
+                            </p>
+                          )}
+                          {dispute.resolution && (
+                            <div className="mt-2 p-3 rounded-lg bg-muted">
+                              <p className="text-sm font-medium">
+                                Resolution: {dispute.resolution.replace('_', ' ')}
+                              </p>
+                              {dispute.adminNote && (
+                                <p className="text-sm text-muted-foreground mt-1">{dispute.adminNote}</p>
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Opened {formatDistanceToNow(new Date(dispute.createdAt), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
               )}
             </TabsContent>
 
@@ -450,7 +562,6 @@ export default function Dashboard() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Rating */}
             <div className="space-y-2">
               <Label htmlFor="rating">Rating</Label>
               <div className="flex items-center gap-2">
@@ -474,7 +585,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Comment */}
             <div className="space-y-2">
               <Label htmlFor="comment">Your Review</Label>
               <Textarea
@@ -514,6 +624,42 @@ export default function Dashboard() {
                   <Star className="h-4 w-4 mr-2" />
                   Submit Review
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dispute Dialog */}
+      <Dialog open={disputeDialog.open} onOpenChange={(open) => !open && setDisputeDialog({ open: false, request: null })}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Open a Dispute</DialogTitle>
+            <DialogDescription>
+              Describe your issue with "{disputeDialog.request?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea
+                placeholder="Explain why you're disputing this service..."
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                rows={5}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDisputeDialog({ open: false, request: null })} disabled={isSubmittingDispute}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSubmitDispute} disabled={isSubmittingDispute || !disputeReason.trim()}>
+              {isSubmittingDispute ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>
+              ) : (
+                <><Flag className="h-4 w-4 mr-2" />Submit Dispute</>
               )}
             </Button>
           </DialogFooter>

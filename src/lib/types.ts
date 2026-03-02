@@ -267,7 +267,43 @@ export type NotificationType =
   | 'REQUEST_COMPLETED'
   | 'REQUEST_CANCELLED'
   | 'NEW_MESSAGE'
-  | 'NEW_REVIEW';
+  | 'NEW_REVIEW'
+  | 'DISPUTE_OPENED'
+  | 'DISPUTE_RESPONSE'
+  | 'DISPUTE_RESOLVED';
+
+// Dispute Types
+export type DisputeStatus = 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED';
+export type DisputeResolution = 'CLIENT_FAVORED' | 'PROVIDER_FAVORED' | 'COMPROMISE';
+
+export interface Dispute {
+  id: string;
+  requestId: string;
+  raisedById: string;
+  reason: string;
+  evidence: string[];
+  providerResponse?: string | null;
+  providerEvidence: string[];
+  status: DisputeStatus;
+  resolution?: DisputeResolution | null;
+  adminNote?: string | null;
+  resolvedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  request?: {
+    id: string;
+    title: string;
+    finalPrice?: number | null;
+    status?: string;
+    client?: { id: string; name: string; avatar?: string | null };
+    provider?: {
+      id: string;
+      user: { id: string; name: string; avatar?: string | null };
+    };
+  };
+  raisedBy?: { id: string; name: string; avatar?: string | null };
+  resolvedBy?: { id: string; name: string } | null;
+}
 
 export interface Notification {
   id: string;

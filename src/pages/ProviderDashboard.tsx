@@ -6,11 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { ProviderProfileForm } from '@/components/providers/ProviderProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { providersApi, serviceRequestsApi } from '@/lib/api';
-import type { Provider, ServiceRequest, RequestStatus, ProviderAnalytics } from '@/lib/types';
-import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp, Clock, CheckCircle, Heart } from 'lucide-react';
+import { providersApi, serviceRequestsApi, disputesApi } from '@/lib/api';
+import type { Provider, ServiceRequest, RequestStatus, ProviderAnalytics, Dispute } from '@/lib/types';
+import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp, Clock, CheckCircle, Heart, Flag } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -25,6 +28,11 @@ export default function ProviderDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<ProviderAnalytics | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [isLoadingDisputes, setIsLoadingDisputes] = useState(false);
+  const [respondDialog, setRespondDialog] = useState<{ open: boolean; dispute: Dispute | null }>({ open: false, dispute: null });
+  const [respondText, setRespondText] = useState('');
+  const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
   const { user } = useAuth();
 
   // Fetch provider profile
@@ -68,6 +76,32 @@ export default function ProviderDashboard() {
     }
   }, []);
 
+  const fetchDisputes = useCallback(async () => {
+    setIsLoadingDisputes(true);
+    try {
+      const data = await disputesApi.getProviderDisputes();
+      setDisputes(data);
+    } catch {
+    } finally {
+      setIsLoadingDisputes(false);
+    }
+  }, []);
+
+  const handleRespondDispute = async () => {
+    if (!respondDialog.dispute || !respondText.trim()) return;
+    setIsSubmittingResponse(true);
+    try {
+      await disputesApi.providerRespond(respondDialog.dispute.id, { providerResponse: respondText.trim() });
+      toast.success('Response submitted');
+      setRespondDialog({ open: false, dispute: null });
+      fetchDisputes();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to respond');
+    } finally {
+      setIsSubmittingResponse(false);
+    }
+  };
+
   useEffect(() => {
     fetchProvider();
   }, []);
@@ -76,6 +110,7 @@ export default function ProviderDashboard() {
     if (provider) {
       fetchRequests();
       fetchAnalytics();
+      fetchDisputes();
     }
   }, [provider]);
 
@@ -289,6 +324,7 @@ export default function ProviderDashboard() {
                     <TabsList className="w-full justify-start">
                       <TabsTrigger value="overview">Overview</TabsTrigger>
                       <TabsTrigger value="requests">Requests</TabsTrigger>
+                      <TabsTrigger value="disputes">Disputes</TabsTrigger>
                       <TabsTrigger value="analytics">Analytics</TabsTrigger>
                     </TabsList>
                   </CardHeader>
@@ -510,6 +546,80 @@ export default function ProviderDashboard() {
                       )}
                     </TabsContent>
 
+                    {/* Disputes Tab */}
+                    <TabsContent value="disputes" className="space-y-4">
+                      {isLoadingDisputes ? (
+                        <div className="flex justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : disputes.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">No Disputes</h3>
+                          <p className="text-muted-foreground">No disputes have been raised against you</p>
+                        </div>
+                      ) : (
+                        disputes.map((dispute) => (
+                          <Card key={dispute.id}>
+                            <CardContent className="p-6">
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <h3 className="font-semibold">{dispute.request?.title}</h3>
+                                    <Badge
+                                      className={
+                                        dispute.status === 'OPEN'
+                                          ? 'bg-warning/20 text-warning'
+                                          : dispute.status === 'UNDER_REVIEW'
+                                            ? 'bg-primary/20 text-primary'
+                                            : 'bg-success/20 text-success'
+                                      }
+                                    >
+                                      {dispute.status.replace('_', ' ')}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    Raised by: {dispute.raisedBy?.name}
+                                  </p>
+                                  <p className="text-sm mb-2"><strong>Reason:</strong> {dispute.reason}</p>
+                                  {dispute.providerResponse && (
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      <strong>Your Response:</strong> {dispute.providerResponse}
+                                    </p>
+                                  )}
+                                  {dispute.resolution && (
+                                    <div className="mt-2 p-3 rounded-lg bg-muted">
+                                      <p className="text-sm font-medium">
+                                        Resolution: {dispute.resolution.replace('_', ' ')}
+                                      </p>
+                                      {dispute.adminNote && (
+                                        <p className="text-sm text-muted-foreground mt-1">{dispute.adminNote}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    {formatDistanceToNow(new Date(dispute.createdAt), { addSuffix: true })}
+                                  </p>
+                                </div>
+                                {dispute.status === 'OPEN' && !dispute.providerResponse && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setRespondDialog({ open: true, dispute });
+                                      setRespondText('');
+                                    }}
+                                  >
+                                    Respond
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </TabsContent>
+
                     {/* Analytics Tab */}
                     <TabsContent value="analytics" className="space-y-6">
                       {isLoadingAnalytics ? (
@@ -710,6 +820,46 @@ export default function ProviderDashboard() {
 
       <Footer />
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
+
+      {/* Dispute Respond Dialog */}
+      <Dialog open={respondDialog.open} onOpenChange={(open) => !open && setRespondDialog({ open: false, dispute: null })}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Respond to Dispute</DialogTitle>
+            <DialogDescription>
+              Provide your side of the story for "{respondDialog.dispute?.request?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-muted">
+              <p className="text-sm font-medium mb-1">Client's Reason:</p>
+              <p className="text-sm text-muted-foreground">{respondDialog.dispute?.reason}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Your Response</Label>
+              <Textarea
+                placeholder="Explain your perspective..."
+                value={respondText}
+                onChange={(e) => setRespondText(e.target.value)}
+                rows={5}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRespondDialog({ open: false, dispute: null })} disabled={isSubmittingResponse}>
+              Cancel
+            </Button>
+            <Button variant="hero" onClick={handleRespondDispute} disabled={isSubmittingResponse || !respondText.trim()}>
+              {isSubmittingResponse ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>
+              ) : (
+                'Submit Response'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

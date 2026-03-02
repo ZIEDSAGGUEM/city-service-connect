@@ -12,11 +12,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Users, Briefcase, DollarSign, TrendingUp, Search, Shield, ShieldOff,
-  Trash2, Loader2, Plus, Pencil, Star, CheckCircle, XCircle, BarChart3,
+  Trash2, Loader2, Plus, Pencil, Star, CheckCircle, XCircle, BarChart3, Flag,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { adminApi, categoriesApi } from '@/lib/api';
-import type { AdminDashboardStats, AdminUser, AdminProvider, Category } from '@/lib/types';
+import { adminApi, categoriesApi, disputesApi } from '@/lib/api';
+import type { AdminDashboardStats, AdminUser, AdminProvider, Category, Dispute } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 export default function AdminDashboard() {
@@ -35,6 +35,12 @@ export default function AdminDashboard() {
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [catForm, setCatForm] = useState({ name: '', icon: '', description: '' });
+
+  // Disputes
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [disputeStatusFilter, setDisputeStatusFilter] = useState('');
+  const [resolveDialog, setResolveDialog] = useState<{ open: boolean; dispute: Dispute | null }>({ open: false, dispute: null });
+  const [resolveForm, setResolveForm] = useState({ resolution: '', adminNote: '' });
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -64,13 +70,21 @@ export default function AdminDashboard() {
     } catch { /* */ }
   }, []);
 
+  const fetchDisputes = useCallback(async () => {
+    try {
+      const data = await disputesApi.adminGetAll(disputeStatusFilter || undefined);
+      setDisputes(data);
+    } catch { /* */ }
+  }, [disputeStatusFilter]);
+
   useEffect(() => {
-    Promise.all([fetchDashboard(), fetchUsers(), fetchProviders(), fetchCategories()])
+    Promise.all([fetchDashboard(), fetchUsers(), fetchProviders(), fetchCategories(), fetchDisputes()])
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { fetchUsers(); }, [userSearch, userRoleFilter]);
   useEffect(() => { fetchProviders(); }, [providerSearch, providerStatusFilter]);
+  useEffect(() => { fetchDisputes(); }, [disputeStatusFilter]);
 
   const handleToggleUserVerification = async (id: string) => {
     setActionLoading(id);
@@ -162,6 +176,25 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleResolveDispute = async () => {
+    if (!resolveDialog.dispute || !resolveForm.resolution) return;
+    setActionLoading(resolveDialog.dispute.id);
+    try {
+      await disputesApi.adminResolve(resolveDialog.dispute.id, {
+        resolution: resolveForm.resolution,
+        adminNote: resolveForm.adminNote || undefined,
+      });
+      toast.success('Dispute resolved');
+      setResolveDialog({ open: false, dispute: null });
+      fetchDisputes();
+      fetchDashboard();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to resolve');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -213,6 +246,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="providers">Providers</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="disputes">Disputes</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -578,7 +612,141 @@ export default function AdminDashboard() {
               ))}
             </div>
           </TabsContent>
+          {/* Disputes Tab */}
+          <TabsContent value="disputes" className="space-y-4">
+            <div className="flex gap-3 items-center">
+              <p className="text-muted-foreground flex-1">{disputes.length} disputes</p>
+              <Select value={disputeStatusFilter || 'all'} onValueChange={(v) => setDisputeStatusFilter(v === 'all' ? '' : v)}>
+                <SelectTrigger className="w-44"><SelectValue placeholder="All Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                  <SelectItem value="RESOLVED">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {disputes.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Flag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No disputes found</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {disputes.map((d) => (
+                  <Card key={d.id}>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{d.request?.title}</h3>
+                            <Badge
+                              className={
+                                d.status === 'OPEN'
+                                  ? 'bg-warning/20 text-warning'
+                                  : d.status === 'UNDER_REVIEW'
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'bg-success/20 text-success'
+                              }
+                            >
+                              {d.status.replace('_', ' ')}
+                            </Badge>
+                            {d.resolution && (
+                              <Badge variant="secondary">{d.resolution.replace('_', ' ')}</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>Client: {d.request?.client?.name || d.raisedBy?.name}</span>
+                            <span>Provider: {d.request?.provider?.user?.name}</span>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm"><strong>Reason:</strong> {d.reason}</p>
+                          </div>
+                          {d.providerResponse && (
+                            <div className="mt-1">
+                              <p className="text-sm"><strong>Provider Response:</strong> {d.providerResponse}</p>
+                            </div>
+                          )}
+                          {d.adminNote && (
+                            <div className="mt-1 p-2 bg-muted rounded">
+                              <p className="text-sm"><strong>Admin Note:</strong> {d.adminNote}</p>
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Opened {new Date(d.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {d.status !== 'RESOLVED' && (
+                          <Button
+                            variant="hero"
+                            size="sm"
+                            onClick={() => {
+                              setResolveDialog({ open: true, dispute: d });
+                              setResolveForm({ resolution: '', adminNote: '' });
+                            }}
+                          >
+                            Resolve
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
+
+        {/* Resolve Dispute Dialog */}
+        <Dialog open={resolveDialog.open} onOpenChange={(open) => !open && setResolveDialog({ open: false, dispute: null })}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Resolve Dispute</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Resolution</Label>
+                <Select value={resolveForm.resolution} onValueChange={(v) => setResolveForm({ ...resolveForm, resolution: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select resolution..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLIENT_FAVORED">Favor Client</SelectItem>
+                    <SelectItem value="PROVIDER_FAVORED">Favor Provider</SelectItem>
+                    <SelectItem value="COMPROMISE">Compromise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Admin Note (optional)</Label>
+                <Textarea
+                  placeholder="Explain the resolution decision..."
+                  value={resolveForm.adminNote}
+                  onChange={(e) => setResolveForm({ ...resolveForm, adminNote: e.target.value })}
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setResolveDialog({ open: false, dispute: null })}>
+                Cancel
+              </Button>
+              <Button
+                variant="hero"
+                onClick={handleResolveDispute}
+                disabled={!resolveForm.resolution || actionLoading === resolveDialog.dispute?.id}
+              >
+                {actionLoading === resolveDialog.dispute?.id ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Resolving...</>
+                ) : (
+                  'Resolve Dispute'
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
