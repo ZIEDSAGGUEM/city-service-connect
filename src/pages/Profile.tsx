@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { uploadsApi } from '@/lib/api';
+import { uploadsApi, usersApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -45,11 +45,24 @@ export default function Profile() {
     }
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSave = async () => {
-    toast.success('Profile updated', {
-      description: 'Your profile has been updated successfully.',
-    });
-    setIsEditing(false);
+    setIsSaving(true);
+    try {
+      await usersApi.updateProfile({ name, phone, location });
+      await refreshUser();
+      toast.success('Profile updated', {
+        description: 'Your profile has been updated successfully.',
+      });
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error('Update failed', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -230,10 +243,17 @@ export default function Profile() {
 
                 {isEditing && (
                   <div className="flex gap-2 pt-4">
-                    <Button onClick={handleSave}>
-                      Save Changes
+                    <Button onClick={handleSave} disabled={isSaving}>
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
                     </Button>
-                    <Button variant="outline" onClick={() => {
+                    <Button variant="outline" disabled={isSaving} onClick={() => {
                       setIsEditing(false);
                       setName(user?.name || '');
                       setPhone(user?.phone ?? '');

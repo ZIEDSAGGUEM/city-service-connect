@@ -316,6 +316,42 @@ export interface Notification {
   createdAt: string;
 }
 
+// User Settings Types
+export interface UserSettings {
+  id: string;
+  userId: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  messageNotifications: boolean;
+  bookingNotifications: boolean;
+  reviewNotifications: boolean;
+  profileVisible: boolean;
+  showRatingsPublicly: boolean;
+  showAvailability: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateProfileDto {
+  name?: string;
+  phone?: string;
+  location?: string;
+}
+
+export interface UpdateNotificationSettingsDto {
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  messageNotifications?: boolean;
+  bookingNotifications?: boolean;
+  reviewNotifications?: boolean;
+}
+
+export interface UpdatePrivacySettingsDto {
+  profileVisible?: boolean;
+  showRatingsPublicly?: boolean;
+  showAvailability?: boolean;
+}
+
 // Provider Analytics Types
 export interface ProviderAnalytics {
   totalEarnings: number;

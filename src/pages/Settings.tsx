@@ -1,33 +1,127 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Mail, MessageSquare, Star, Calendar, Shield, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Bell, Mail, MessageSquare, Star, Calendar, Shield, Trash2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usersApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [messageNotifications, setMessageNotifications] = useState(true);
   const [bookingNotifications, setBookingNotifications] = useState(true);
   const [reviewNotifications, setReviewNotifications] = useState(true);
 
-  const handleSaveNotifications = () => {
-    toast.success('Settings saved', {
-      description: 'Your notification preferences have been updated.',
-    });
+  const [profileVisible, setProfileVisible] = useState(true);
+  const [showRatingsPublicly, setShowRatingsPublicly] = useState(true);
+  const [showAvailability, setShowAvailability] = useState(true);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const settings = await usersApi.getSettings();
+      setEmailNotifications(settings.emailNotifications);
+      setPushNotifications(settings.pushNotifications);
+      setMessageNotifications(settings.messageNotifications);
+      setBookingNotifications(settings.bookingNotifications);
+      setReviewNotifications(settings.reviewNotifications);
+      setProfileVisible(settings.profileVisible);
+      setShowRatingsPublicly(settings.showRatingsPublicly);
+      setShowAvailability(settings.showAvailability);
+    } catch {
+      // Defaults are fine if settings don't exist yet
+    } finally {
+      setIsLoadingSettings(false);
+    }
   };
 
-  const handleDeleteAccount = () => {
-    toast.error('Account deletion', {
-      description: 'Please contact support to delete your account.',
-    });
+  const handleSaveNotifications = async () => {
+    setIsSavingNotifications(true);
+    try {
+      await usersApi.updateNotificationSettings({
+        emailNotifications,
+        pushNotifications,
+        messageNotifications,
+        bookingNotifications,
+        reviewNotifications,
+      });
+      toast.success('Settings saved', {
+        description: 'Your notification preferences have been updated.',
+      });
+    } catch (error: any) {
+      toast.error('Failed to save', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+
+  const handleSavePrivacy = async () => {
+    setIsSavingPrivacy(true);
+    try {
+      await usersApi.updatePrivacySettings({
+        profileVisible,
+        showRatingsPublicly,
+        showAvailability,
+      });
+      toast.success('Settings saved', {
+        description: 'Your privacy preferences have been updated.',
+      });
+    } catch (error: any) {
+      toast.error('Failed to save', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await usersApi.deleteAccount();
+      toast.success('Account deleted', {
+        description: 'Your account has been permanently deleted.',
+      });
+      await logout();
+      navigate('/');
+    } catch (error: any) {
+      toast.error('Deletion failed', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -50,7 +144,6 @@ export default function Settings() {
           </TabsList>
 
           <TabsContent value="notifications" className="space-y-6">
-            {/* Email Notifications */}
             <Card>
               <CardHeader>
                 <CardTitle>Email Notifications</CardTitle>
@@ -70,6 +163,7 @@ export default function Settings() {
                   <Switch
                     checked={emailNotifications}
                     onCheckedChange={setEmailNotifications}
+                    disabled={isLoadingSettings}
                   />
                 </div>
 
@@ -86,6 +180,7 @@ export default function Settings() {
                   <Switch
                     checked={messageNotifications}
                     onCheckedChange={setMessageNotifications}
+                    disabled={isLoadingSettings}
                   />
                 </div>
 
@@ -102,6 +197,7 @@ export default function Settings() {
                   <Switch
                     checked={bookingNotifications}
                     onCheckedChange={setBookingNotifications}
+                    disabled={isLoadingSettings}
                   />
                 </div>
 
@@ -118,16 +214,23 @@ export default function Settings() {
                   <Switch
                     checked={reviewNotifications}
                     onCheckedChange={setReviewNotifications}
+                    disabled={isLoadingSettings}
                   />
                 </div>
 
-                <Button onClick={handleSaveNotifications} className="mt-4">
-                  Save Preferences
+                <Button onClick={handleSaveNotifications} disabled={isSavingNotifications || isLoadingSettings} className="mt-4">
+                  {isSavingNotifications ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Preferences'
+                  )}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Push Notifications */}
             <Card>
               <CardHeader>
                 <CardTitle>Push Notifications</CardTitle>
@@ -147,6 +250,7 @@ export default function Settings() {
                   <Switch
                     checked={pushNotifications}
                     onCheckedChange={setPushNotifications}
+                    disabled={isLoadingSettings}
                   />
                 </div>
               </CardContent>
@@ -170,7 +274,11 @@ export default function Settings() {
                       </p>
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={profileVisible}
+                    onCheckedChange={setProfileVisible}
+                    disabled={isLoadingSettings}
+                  />
                 </div>
 
                 {user?.role === 'PROVIDER' && (
@@ -185,7 +293,11 @@ export default function Settings() {
                           </p>
                         </div>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch
+                        checked={showRatingsPublicly}
+                        onCheckedChange={setShowRatingsPublicly}
+                        disabled={isLoadingSettings}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -198,16 +310,30 @@ export default function Settings() {
                           </p>
                         </div>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch
+                        checked={showAvailability}
+                        onCheckedChange={setShowAvailability}
+                        disabled={isLoadingSettings}
+                      />
                     </div>
                   </>
                 )}
+
+                <Button onClick={handleSavePrivacy} disabled={isSavingPrivacy || isLoadingSettings} className="mt-4">
+                  {isSavingPrivacy ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Privacy Settings'
+                  )}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="account" className="space-y-6">
-            {/* Account Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Account Management</CardTitle>
@@ -237,7 +363,6 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
             <Card className="border-destructive">
               <CardHeader>
                 <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -251,17 +376,44 @@ export default function Settings() {
                       <div className="flex-1">
                         <p className="font-medium text-destructive">Delete Account</p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Once you delete your account, there is no going back. Please be certain.
+                          Once you delete your account, there is no going back. All your data, service requests, messages, and reviews will be permanently removed.
                         </p>
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteAccount}
-                  >
-                    Delete Account
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" disabled={isDeleting}>
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          'Delete Account'
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your
+                          account and remove all your data from our servers, including
+                          service requests, messages, reviews, and favorites.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteAccount}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Yes, delete my account
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
@@ -271,4 +423,3 @@ export default function Settings() {
     </Layout>
   );
 }
-

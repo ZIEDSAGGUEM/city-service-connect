@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider, Dispute } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider, Dispute, UserSettings, UpdateProfileDto, UpdateNotificationSettingsDto, UpdatePrivacySettingsDto } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -67,6 +67,30 @@ export const authApi = {
   },
   resetPassword: async (token: string, newPassword: string) => {
     const response = await api.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  },
+};
+
+// Users API
+export const usersApi = {
+  updateProfile: async (data: UpdateProfileDto): Promise<any> => {
+    const response = await api.put('/users/profile', data);
+    return response.data;
+  },
+  getSettings: async (): Promise<UserSettings> => {
+    const response = await api.get('/users/settings');
+    return response.data;
+  },
+  updateNotificationSettings: async (data: UpdateNotificationSettingsDto): Promise<UserSettings> => {
+    const response = await api.put('/users/settings/notifications', data);
+    return response.data;
+  },
+  updatePrivacySettings: async (data: UpdatePrivacySettingsDto): Promise<UserSettings> => {
+    const response = await api.put('/users/settings/privacy', data);
+    return response.data;
+  },
+  deleteAccount: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/users/account');
     return response.data;
   },
 };
