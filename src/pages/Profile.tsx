@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { uploadsApi, usersApi } from '@/lib/api';
+import { uploadsApi, authApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -19,6 +19,11 @@ export default function Profile() {
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,12 +50,10 @@ export default function Profile() {
     }
   };
 
-  const [isSaving, setIsSaving] = useState(false);
-
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await usersApi.updateProfile({ name, phone, location });
+      await authApi.updateProfile({ name, phone, location });
       await refreshUser();
       toast.success('Profile updated', {
         description: 'Your profile has been updated successfully.',
@@ -62,6 +65,47 @@ export default function Profile() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await authApi.changePassword({ currentPassword, newPassword });
+      toast.success('Password updated', {
+        description: 'Your password has been changed successfully.',
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast.error('Password change failed', {
+        description: error.response?.data?.message || 'Please try again',
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return;
+    try {
+      await authApi.resendVerification(user.email);
+      toast.success('Verification email sent', {
+        description: 'Please check your inbox.',
+      });
+    } catch (error: any) {
+      toast.error('Failed to send verification email', {
+        description: error.response?.data?.message || 'Please try again',
+      });
     }
   };
 
@@ -253,7 +297,7 @@ export default function Profile() {
                         'Save Changes'
                       )}
                     </Button>
-                    <Button variant="outline" disabled={isSaving} onClick={() => {
+                    <Button variant="outline" onClick={() => {
                       setIsEditing(false);
                       setName(user?.name || '');
                       setPhone(user?.phone ?? '');
@@ -281,6 +325,8 @@ export default function Profile() {
                     id="current-password"
                     type="password"
                     placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
                   />
                 </div>
 
@@ -290,6 +336,8 @@ export default function Profile() {
                     id="new-password"
                     type="password"
                     placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                   />
                 </div>
 
@@ -299,11 +347,24 @@ export default function Profile() {
                     id="confirm-password"
                     type="password"
                     placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                   />
                 </div>
 
-                <Button className="mt-4">
-                  Update Password
+                <Button
+                  className="mt-4"
+                  onClick={handleChangePassword}
+                  disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -331,7 +392,7 @@ export default function Profile() {
                       <span className="text-sm font-medium">Verified</span>
                     </div>
                   ) : (
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleResendVerification}>
                       Verify Email
                     </Button>
                   )}

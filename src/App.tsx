@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SocketProvider } from "./contexts/SocketContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestRoute } from "./components/GuestRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import Services from "./pages/Services";
 import ProviderDetail from "./pages/ProviderDetail";
@@ -23,6 +24,8 @@ import Messages from "./pages/Messages";
 import HowItWorks from "./pages/HowItWorks";
 import BecomeProvider from "./pages/BecomeProvider";
 import AdminDashboard from "./pages/AdminDashboard";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +38,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/services" element={<Services />} />
@@ -115,9 +119,11 @@ const App = () => (
             />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/become-provider" element={<BecomeProvider />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
       </SocketProvider>

@@ -6,6 +6,7 @@ export type { User, UserRole };
 export interface AuthResponse {
   user: User;
   accessToken: string;
+  refreshToken?: string;
 }
 
 export interface SignUpData {
@@ -53,8 +54,10 @@ export const signIn = async ({ email, password }: SignInData): Promise<AuthRespo
 
     console.log('✅ Login successful:', response);
 
-    // Store token in localStorage
     localStorage.setItem('access_token', response.accessToken);
+    if (response.refreshToken) {
+      localStorage.setItem('refresh_token', response.refreshToken);
+    }
 
     return response;
   } catch (error: any) {
@@ -70,6 +73,7 @@ export const signIn = async ({ email, password }: SignInData): Promise<AuthRespo
 // Sign out
 export const signOut = async (): Promise<void> => {
   localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
   window.location.href = '/login';
 };
 

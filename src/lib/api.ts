@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider, Dispute, UserSettings, UpdateProfileDto, UpdateNotificationSettingsDto, UpdatePrivacySettingsDto } from './types';
+import type { Provider, CreateProviderDto, UpdateProviderDto, SearchProvidersFilters, Category, ServiceRequest, CreateServiceRequestDto, CancelServiceRequestDto, CompleteServiceRequestDto, RequestStatus, Review, CreateReviewDto, Message, ConversationSummary, SendMessageDto, AiChatMessage, AiChatResponse, Favorite, Notification, ProviderAnalytics, AdminDashboardStats, AdminUser, AdminProvider, Dispute } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -24,18 +24,88 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401 errors
+// Token refresh state
+let isRefreshing = false;
+let failedQueue: { resolve: (token: string) => void; reject: (error: any) => void }[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (token) resolve(token);
+    else reject(error);
+  });
+  failedQueue = [];
+};
+
+// Response interceptor with token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      const requestUrl = error.config?.url || '';
+  async (error) => {
+    const originalRequest = error.config;
+    const status = error.response?.status;
+    const requestUrl = originalRequest?.url || '';
+
+    // Attempt token refresh on 401 (not for auth endpoints or already-retried)
+    if (
+      status === 401 &&
+      !originalRequest._retry &&
+      !requestUrl.includes('/auth/login') &&
+      !requestUrl.includes('/auth/refresh') &&
+      !requestUrl.includes('/auth/me')
+    ) {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          const { data } = await api.post('/auth/refresh', { refreshToken });
+          localStorage.setItem('access_token', data.accessToken);
+          if (data.refreshToken) {
+            localStorage.setItem('refresh_token', data.refreshToken);
+          }
+          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+          processQueue(null, data.accessToken);
+          return api(originalRequest);
+        } catch (refreshError) {
+          processQueue(refreshError, null);
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
       localStorage.removeItem('access_token');
-      // Skip redirect for the initial auth check — AuthContext handles it gracefully
+      localStorage.removeItem('refresh_token');
       if (!requestUrl.includes('/auth/me')) {
         window.location.href = '/login';
       }
     }
+
+    if (status === 403) {
+      console.error('Access denied:', error.response?.data?.message);
+    }
+
+    if (status === 429) {
+      const serverMessage = error.response?.data?.message;
+      error.message = serverMessage || 'Too many requests. Please slow down.';
+    }
+
+    if (status && status >= 500) {
+      console.error('Server error:', error.response?.data);
+    }
+
     return Promise.reject(error);
   }
 );
@@ -69,28 +139,28 @@ export const authApi = {
     const response = await api.post('/auth/reset-password', { token, newPassword });
     return response.data;
   },
-};
-
-// Users API
-export const usersApi = {
-  updateProfile: async (data: UpdateProfileDto): Promise<any> => {
-    const response = await api.put('/users/profile', data);
+  updateProfile: async (data: { name?: string; phone?: string; location?: string }) => {
+    const response = await api.put('/auth/profile', data);
     return response.data;
   },
-  getSettings: async (): Promise<UserSettings> => {
-    const response = await api.get('/users/settings');
+  changePassword: async (data: { currentPassword: string; newPassword: string }) => {
+    const response = await api.put('/auth/change-password', data);
     return response.data;
   },
-  updateNotificationSettings: async (data: UpdateNotificationSettingsDto): Promise<UserSettings> => {
-    const response = await api.put('/users/settings/notifications', data);
+  getSettings: async () => {
+    const response = await api.get('/auth/settings');
     return response.data;
   },
-  updatePrivacySettings: async (data: UpdatePrivacySettingsDto): Promise<UserSettings> => {
-    const response = await api.put('/users/settings/privacy', data);
+  updateSettings: async (data: Record<string, boolean>) => {
+    const response = await api.put('/auth/settings', data);
     return response.data;
   },
-  deleteAccount: async (): Promise<{ message: string }> => {
-    const response = await api.delete('/users/account');
+  deleteAccount: async (password: string) => {
+    const response = await api.delete('/auth/account', { data: { password } });
+    return response.data;
+  },
+  refreshToken: async (refreshToken: string) => {
+    const response = await api.post('/auth/refresh', { refreshToken });
     return response.data;
   },
 };
