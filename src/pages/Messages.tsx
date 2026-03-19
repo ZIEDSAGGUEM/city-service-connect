@@ -43,6 +43,19 @@ export default function Messages() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      const el = messagesEndRef.current;
+      if (!el) return;
+      const viewport = el.closest('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      } else {
+        el.scrollIntoView({ block: 'end' });
+      }
+    }, 100);
+  }, []);
+
   const loadConversations = useCallback(async () => {
     try {
       const data = await messagesApi.getConversations();
@@ -58,6 +71,9 @@ export default function Messages() {
     try {
       const data = await messagesApi.getConversation(requestId);
       setMessages(data);
+      // Backend marks messages as read when fetching — refresh conversation list to update unread badges
+      const convs = await messagesApi.getConversations();
+      setConversations(convs);
     } catch (error: any) {
       console.error('Failed to load messages:', error?.response?.status, error?.response?.data);
     } finally {
@@ -114,17 +130,26 @@ export default function Messages() {
       if (message.requestId === selectedRequestId) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === message.id)) return prev;
-          // Remove temp messages from the same sender
-          const filtered = prev.filter(
-            (m) => !(m.id.startsWith('temp-') && m.senderId === message.senderId),
-          );
-          return [...filtered, message];
+          // If this is our own message, the REST response or optimistic update
+          // already added it — skip to avoid duplicates
+          if (message.senderId === user?.id) {
+            const hasTemp = prev.some(
+              (m) => m.id.startsWith('temp-') && m.senderId === message.senderId,
+            );
+            if (hasTemp) {
+              return prev.map((m) =>
+                m.id.startsWith('temp-') && m.senderId === message.senderId ? message : m,
+              );
+            }
+            return prev;
+          }
+          return [...prev, message];
         });
       }
       loadConversations();
     });
     return unsub;
-  }, [on, selectedRequestId, loadConversations]);
+  }, [on, selectedRequestId, user?.id, loadConversations]);
 
   // Real-time: typing indicators
   useEffect(() => {
@@ -157,10 +182,12 @@ export default function Messages() {
     return () => clearInterval(interval);
   }, [connected, selectedRequestId, loadConversations]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom when messages finish loading or new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length > 0 && !isLoadingMessages) {
+      scrollToBottom();
+    }
+  }, [messages, isLoadingMessages, scrollToBottom]);
 
   // Sync URL param
   useEffect(() => {
@@ -172,6 +199,10 @@ export default function Messages() {
   }, [selectedRequestId, setSearchParams]);
 
   const handleSelectConversation = (requestId: string) => {
+    if (requestId === selectedRequestId) {
+      loadMessages(requestId);
+      return;
+    }
     setSelectedRequestId(requestId);
     setMessages([]);
     setHeaderOverride(null);
@@ -203,14 +234,6 @@ export default function Messages() {
       // Replace optimistic with real message
       setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? sent : m)));
       loadConversations();
-
-      // Also broadcast via WS so the other party gets it in real-time
-      if (connected) {
-        // The backend REST endpoint already saved the message. We just need to notify
-        // the other party in the room. The backend gateway doesn't know about REST-sent messages,
-        // so we emit a custom event.
-        emit('notifyNewMessage', { requestId: selectedRequestId, message: sent });
-      }
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       toast.error('Failed to send message');

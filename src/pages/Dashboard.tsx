@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -15,12 +15,14 @@ import { Calendar, Clock, DollarSign, Star, MessageSquare, Plus, CheckCircle, Al
 import { serviceRequestsApi, reviewsApi, favoritesApi, disputesApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSocketContext } from '@/contexts/SocketContext';
 import type { ServiceRequest, RequestStatus, Favorite, Dispute } from '@/lib/types';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { on } = useSocketContext();
   const navigate = useNavigate();
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
@@ -37,17 +39,7 @@ export default function Dashboard() {
   const [disputeReason, setDisputeReason] = useState('');
   const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
 
-  useEffect(() => {
-    if (!isAuthLoading && user) {
-      fetchRequests();
-      fetchFavorites();
-      fetchDisputes();
-    } else if (!isAuthLoading && !user) {
-      setIsLoading(false);
-    }
-  }, [user, isAuthLoading]);
-
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     if (!user) return;
     
     setIsLoading(true);
@@ -60,7 +52,25 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      fetchRequests();
+      fetchFavorites();
+      fetchDisputes();
+    } else if (!isAuthLoading && !user) {
+      setIsLoading(false);
+    }
+  }, [user, isAuthLoading, fetchRequests]);
+
+  // Real-time: refresh requests when a status changes
+  useEffect(() => {
+    const unsub = on('requestStatusUpdate', () => {
+      fetchRequests();
+    });
+    return unsub;
+  }, [on, fetchRequests]);
 
   const fetchFavorites = async () => {
     setIsLoadingFavorites(true);

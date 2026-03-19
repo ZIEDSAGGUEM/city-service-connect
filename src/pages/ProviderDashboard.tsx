@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ProviderProfileForm } from '@/components/providers/ProviderProfileForm';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSocketContext } from '@/contexts/SocketContext';
 import { providersApi, serviceRequestsApi, disputesApi } from '@/lib/api';
 import type { Provider, ServiceRequest, RequestStatus, ProviderAnalytics, Dispute } from '@/lib/types';
 import { Calendar, DollarSign, Star, AlertCircle, Loader2, Settings, User, Briefcase, Shield, TrendingUp, Clock, CheckCircle, Heart, Flag } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function ProviderDashboard() {
   const [respondText, setRespondText] = useState('');
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
   const { user } = useAuth();
+  const { on } = useSocketContext();
 
   // Fetch provider profile
   const fetchProvider = async () => {
@@ -51,7 +53,7 @@ export default function ProviderDashboard() {
   };
 
   // Fetch incoming service requests
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setIsLoadingRequests(true);
     try {
       const data = await serviceRequestsApi.getProviderRequests();
@@ -62,7 +64,7 @@ export default function ProviderDashboard() {
     } finally {
       setIsLoadingRequests(false);
     }
-  };
+  }, []);
 
   const fetchAnalytics = useCallback(async () => {
     setIsLoadingAnalytics(true);
@@ -112,7 +114,15 @@ export default function ProviderDashboard() {
       fetchAnalytics();
       fetchDisputes();
     }
-  }, [provider]);
+  }, [provider, fetchRequests, fetchAnalytics, fetchDisputes]);
+
+  // Real-time: refresh requests when a status changes
+  useEffect(() => {
+    const unsub = on('requestStatusUpdate', () => {
+      fetchRequests();
+    });
+    return unsub;
+  }, [on, fetchRequests]);
 
   // Handle accept request
   const handleAcceptRequest = async (requestId: string) => {
