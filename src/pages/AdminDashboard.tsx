@@ -198,8 +198,8 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       </Layout>
     );
@@ -207,31 +207,34 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <div className="container py-8 space-y-6">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Platform overview and management</p>
+      <div className="container space-y-8 py-10 md:py-12">
+        <div className="space-y-2">
+          <p className="section-label">Administration</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            Admin dashboard
+          </h1>
+          <p className="max-w-xl text-muted-foreground">Platform overview, users, providers, and disputes.</p>
         </div>
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             {[
-              { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
-              { label: 'Providers', value: stats.totalProviders, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-100' },
-              { label: 'Requests', value: stats.totalRequests, icon: BarChart3, color: 'text-orange-600', bg: 'bg-orange-100' },
-              { label: 'Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-100' },
-              { label: 'New (30d)', value: stats.newUsersThisMonth, icon: TrendingUp, color: 'text-pink-600', bg: 'bg-pink-100' },
+              { label: 'Total Users', value: stats.totalUsers, icon: Users },
+              { label: 'Providers', value: stats.totalProviders, icon: Briefcase },
+              { label: 'Requests', value: stats.totalRequests, icon: BarChart3 },
+              { label: 'Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign },
+              { label: 'New (30d)', value: stats.newUsersThisMonth, icon: TrendingUp },
             ].map((s) => (
-              <Card key={s.label}>
+              <Card key={s.label} className="border-border/70 shadow-soft transition-colors hover:border-primary/15">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-lg ${s.bg} flex items-center justify-center`}>
-                      <s.icon className={`h-5 w-5 ${s.color}`} />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                      <s.icon className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{s.label}</p>
-                      <p className="text-2xl font-bold">{s.value}</p>
+                      <p className="text-2xl font-bold text-foreground">{s.value}</p>
                     </div>
                   </div>
                 </CardContent>

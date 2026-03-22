@@ -3,7 +3,9 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { AppPageShell } from '@/components/layout/AppPageShell';
+import { BrandLogo } from '@/components/layout/BrandLogo';
 import { toast } from 'sonner';
 import { authApi } from '@/lib/api';
 
@@ -69,17 +71,14 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <AppPageShell>
+      <div className="flex min-h-screen flex-1 flex-col lg:flex-row">
       {/* Left Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex flex-1 items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-hero">
-              <MapPin className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-display text-2xl font-bold text-foreground">LocalPro</span>
-          </Link>
+          <div className="mb-8">
+            <BrandLogo className="gap-2.5" />
+          </div>
 
           {!isSuccess ? (
             <>
@@ -199,7 +198,8 @@ export default function ResetPassword() {
         <div className="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
         <div className="absolute bottom-20 left-20 w-48 h-48 bg-white/5 rounded-full blur-3xl" />
       </div>
-    </div>
+      </div>
+    </AppPageShell>
   );
 }
 

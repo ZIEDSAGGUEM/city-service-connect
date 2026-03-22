@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AppPageShell } from '@/components/layout/AppPageShell';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -213,46 +214,47 @@ export default function ProviderDashboard() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <AppPageShell>
         <Header onOpenAI={() => setIsAIOpen(true)} />
-        <main className="flex-1 flex items-center justify-center">
+        <main className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
             <p className="text-lg text-muted-foreground">Loading dashboard...</p>
           </div>
         </main>
         <Footer />
-      </div>
+      </AppPageShell>
     );
   }
 
   // No profile yet - show create form
   if (!provider) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
+      <AppPageShell>
         <Header onOpenAI={() => setIsAIOpen(true)} />
-        <main className="flex-1 container py-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="mb-8 text-center">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <main className="container flex-1 py-10 md:py-12">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-10 text-center">
+              <p className="section-label mb-3">Provider</p>
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/15">
                 <User className="h-10 w-10 text-primary" />
               </div>
-              <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-                Create Your Provider Profile
+              <h1 className="mb-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                Create your provider profile
               </h1>
               <p className="text-muted-foreground">
-                Complete your profile to start receiving service requests from clients
+                Complete your profile to start receiving service requests from clients.
               </p>
             </div>
 
-            <div className="bg-card rounded-2xl shadow-soft p-8">
+            <div className="rounded-2xl border border-border/70 bg-card/80 p-8 shadow-soft backdrop-blur-sm">
               <ProviderProfileForm onSuccess={handleProfileSuccess} />
             </div>
           </div>
         </main>
         <Footer />
         <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
-      </div>
+      </AppPageShell>
     );
   }
 
@@ -265,45 +267,45 @@ export default function ProviderDashboard() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
+    <AppPageShell>
       <Header onOpenAI={() => setIsAIOpen(true)} />
-      
-      <main className="flex-1">
-        {/* Header Section */}
-        <div className="bg-secondary/50 border-b border-border">
-          <div className="container py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+      <main className="relative flex-1">
+        <div className="border-b border-border/60 bg-card/50 backdrop-blur-md">
+          <div className="container py-10 md:py-12">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/15">
                   <Briefcase className="h-10 w-10 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-2">
+                  <p className="section-label mb-1">Provider hub</p>
+                  <h1 className="flex items-center gap-2 font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                     {user?.name}
                     {provider.verified && <Shield className="h-6 w-6 text-primary" />}
                   </h1>
-                  <p className="text-muted-foreground mt-1">
-                    {provider.category?.icon} {provider.category?.name} Provider
+                  <p className="mt-1 text-muted-foreground">
+                    {provider.category?.icon} {provider.category?.name} provider
                   </p>
                   <Badge className="mt-2" variant={provider.status === 'ACTIVE' ? 'default' : 'secondary'}>
                     {provider.status}
                   </Badge>
                 </div>
               </div>
-              <Button onClick={() => setShowEditForm(!showEditForm)} variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
+              <Button onClick={() => setShowEditForm(!showEditForm)} variant="outline" className="border-border/70">
+                <Settings className="mr-2 h-4 w-4" />
                 {showEditForm ? 'Cancel Edit' : 'Edit Profile'}
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="container py-8">
+        <div className="container py-10">
           {showEditForm ? (
             // Edit Profile Form
             <div className="max-w-3xl mx-auto">
               <h2 className="text-2xl font-bold mb-6">Edit Your Profile</h2>
-              <div className="bg-card rounded-2xl shadow-soft p-8">
+              <div className="rounded-2xl border border-border/70 bg-card/80 p-8 shadow-soft backdrop-blur-sm">
                 <ProviderProfileForm provider={provider} onSuccess={handleProfileSuccess} />
               </div>
             </div>
@@ -313,7 +315,7 @@ export default function ProviderDashboard() {
               {/* Stats Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (
-                  <Card key={index}>
+                  <Card key={index} className="border-border/70 shadow-soft transition-colors hover:border-primary/15">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground">
                         {stat.label}
@@ -870,6 +872,6 @@ export default function ProviderDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AppPageShell>
   );
 }

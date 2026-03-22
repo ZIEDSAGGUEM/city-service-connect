@@ -266,26 +266,34 @@ export default function Messages() {
 
   return (
     <Layout>
-      <div className="container max-w-6xl py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="font-display text-2xl font-bold text-foreground">Messages</h1>
+      <div className="container max-w-6xl py-8 md:py-10">
+        <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-label">Inbox</p>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+              Messages
+            </h1>
+            <p className="mt-1 max-w-md text-sm text-muted-foreground">
+              Chat with clients and providers on your active requests.
+            </p>
+          </div>
           {connected && (
-            <Badge variant="outline" className="text-xs text-success border-success/30">
-              <div className="h-1.5 w-1.5 rounded-full bg-success mr-1.5" />
+            <Badge variant="outline" className="w-fit border-success/30 text-xs text-success">
+              <div className="mr-1.5 h-1.5 w-1.5 rounded-full bg-success" />
               Live
             </Badge>
           )}
         </div>
 
-        <div className="border border-border rounded-xl overflow-hidden flex h-[calc(100vh-220px)] min-h-[500px] shadow-sm">
+        <div className="flex min-h-[500px] h-[calc(100vh-240px)] overflow-hidden rounded-2xl border border-border/70 bg-card/40 shadow-soft backdrop-blur-sm">
           {/* Left: Conversation List */}
           <div
             className={cn(
-              'w-full md:w-80 flex-shrink-0 border-r border-border flex flex-col bg-background',
+              'flex w-full flex-shrink-0 flex-col border-r border-border/60 bg-card/30 md:w-80',
               selectedRequestId ? 'hidden md:flex' : 'flex',
             )}
           >
-            <div className="p-3 border-b border-border">
+            <div className="border-b border-border/60 bg-muted/20 p-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -369,7 +377,7 @@ export default function Messages() {
           {/* Right: Chat View */}
           <div
             className={cn(
-              'flex-1 flex flex-col bg-background',
+              'flex flex-1 flex-col bg-background/80',
               !selectedRequestId ? 'hidden md:flex' : 'flex',
             )}
           >
@@ -388,7 +396,7 @@ export default function Messages() {
             ) : (
               <>
                 {/* Chat Header */}
-                <div className="px-4 py-3 border-b border-border flex items-center gap-3 bg-background">
+                <div className="flex items-center gap-3 border-b border-border/60 bg-card/40 px-4 py-3 backdrop-blur-sm">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -495,7 +503,7 @@ export default function Messages() {
                 {/* Message Input */}
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-4 border-t border-border flex gap-2 bg-background"
+                  className="flex gap-2 border-t border-border/60 bg-card/30 p-4 backdrop-blur-sm"
                 >
                   <Input
                     value={newMessage}

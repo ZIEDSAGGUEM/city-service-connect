@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AppPageShell } from '@/components/layout/AppPageShell';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { Button } from '@/components/ui/button';
 import { Search, MessageSquare, CheckCircle, Star, Shield, Clock, DollarSign, ArrowRight } from 'lucide-react';
@@ -43,10 +44,10 @@ export default function HowItWorks() {
   const [isAIOpen, setIsAIOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <AppPageShell>
       <Header onOpenAI={() => setIsAIOpen(true)} />
-      
-      <main className="flex-1">
+
+      <main className="relative flex-1">
         {/* Hero */}
         <section className="bg-gradient-to-b from-secondary/50 to-background py-16 md:py-24">
           <div className="container">
@@ -183,6 +184,6 @@ export default function HowItWorks() {
 
       <Footer />
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
-    </div>
+    </AppPageShell>
   );
 }

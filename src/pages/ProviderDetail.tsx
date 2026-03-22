@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AppPageShell } from '@/components/layout/AppPageShell';
+import { Card, CardContent } from '@/components/ui/card';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -103,42 +105,48 @@ export default function ProviderDetail() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <AppPageShell>
         <Header onOpenAI={() => setIsAIOpen(true)} />
-        <main className="flex-1 flex items-center justify-center">
+        <main className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="text-lg text-muted-foreground">Loading provider details...</p>
           </div>
         </main>
         <Footer />
-      </div>
+      </AppPageShell>
     );
   }
 
   // Not found state
   if (!provider) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <AppPageShell>
         <Header onOpenAI={() => setIsAIOpen(true)} />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground mb-4">Provider not found</h1>
-            <Button asChild>
-              <Link to="/services">Browse all providers</Link>
-            </Button>
-          </div>
+        <main className="flex flex-1 items-center justify-center px-4 py-16">
+          <Card className="max-w-md border-border/70 shadow-soft">
+            <CardContent className="p-10 text-center">
+              <p className="section-label mb-3">Providers</p>
+              <h1 className="mb-2 font-display text-2xl font-bold text-foreground">Provider not found</h1>
+              <p className="mb-6 text-sm text-muted-foreground">
+                This profile may have been removed or the link is incorrect.
+              </p>
+              <Button variant="hero" asChild>
+                <Link to="/services">Browse all providers</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </main>
         <Footer />
-      </div>
+      </AppPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
+    <AppPageShell>
       <Header onOpenAI={() => setIsAIOpen(true)} />
 
-      <main className="flex-1 container py-8">
+      <main className="container flex-1 py-10 md:py-12">
         {/* Back Button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/services">
@@ -151,7 +159,7 @@ export default function ProviderDetail() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Provider Header */}
-            <div className="bg-card rounded-2xl shadow-soft p-6">
+            <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-soft backdrop-blur-sm">
               <div className="flex items-start gap-6 mb-6">
                 <Avatar className="h-24 w-24 border-4 border-primary/20">
                   <AvatarImage src={provider.user?.avatar || undefined} alt={provider.user?.name} />
@@ -201,8 +209,8 @@ export default function ProviderDetail() {
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="about" className="bg-card rounded-2xl shadow-soft overflow-hidden">
-              <TabsList className="w-full justify-start border-b rounded-none h-14 bg-muted/30">
+            <Tabs defaultValue="about" className="overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-soft backdrop-blur-sm">
+              <TabsList className="h-14 w-full justify-start rounded-none border-b border-border/60 bg-muted/30">
                 <TabsTrigger value="about" className="flex-1 sm:flex-none">About</TabsTrigger>
                 <TabsTrigger value="portfolio" className="flex-1 sm:flex-none">Portfolio</TabsTrigger>
                 <TabsTrigger value="reviews" className="flex-1 sm:flex-none">Reviews</TabsTrigger>
@@ -349,7 +357,7 @@ export default function ProviderDetail() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Request Service Card */}
-            <div className="bg-card rounded-2xl shadow-soft p-6 sticky top-8">
+            <div className="sticky top-8 rounded-2xl border border-border/70 bg-card/80 p-6 shadow-soft backdrop-blur-sm">
               {user?.role === 'CLIENT' ? (
                 <>
                   <div className="flex gap-2 mb-4">
@@ -411,8 +419,8 @@ export default function ProviderDetail() {
 
             {/* Contact Info */}
             {provider.user?.phone && (
-              <div className="bg-card rounded-2xl shadow-soft p-6">
-                <h3 className="font-semibold mb-3">Contact Information</h3>
+              <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-soft backdrop-blur-sm">
+                <h3 className="mb-3 font-semibold">Contact Information</h3>
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-muted-foreground">Phone:</span>
@@ -429,6 +437,6 @@ export default function ProviderDetail() {
 
       <Footer />
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
-    </div>
+    </AppPageShell>
   );
 }

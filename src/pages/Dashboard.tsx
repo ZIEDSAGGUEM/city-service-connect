@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AppPageShell } from '@/components/layout/AppPageShell';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -199,20 +200,20 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <AppPageShell>
       <Header onOpenAI={() => setIsAIOpen(true)} />
-      
-      <main className="flex-1 bg-background">
-        {/* Header */}
-        <div className="bg-secondary/50 border-b border-border">
-          <div className="container py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="font-display text-3xl font-bold text-foreground mb-1">
+
+      <main className="relative flex-1">
+        <div className="border-b border-border/60 bg-card/50 backdrop-blur-md">
+          <div className="container py-10 md:py-12">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-2">
+                <p className="section-label">Dashboard</p>
+                <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                   Welcome back, {user?.name.split(' ')[0]}!
                 </h1>
-                <p className="text-muted-foreground">
-                  Manage your service requests and bookings
+                <p className="max-w-lg text-muted-foreground">
+                  Manage your service requests, reviews, and saved providers in one place.
                 </p>
               </div>
               <Button variant="hero" asChild>
@@ -225,11 +226,15 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="container py-8">
+        <div className="container py-10">
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
             {stats.map((stat, index) => (
-              <Card key={stat.label} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <Card
+                key={stat.label}
+                className="animate-slide-up border-border/70 shadow-soft transition-colors hover:border-primary/15"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -280,7 +285,11 @@ export default function Dashboard() {
                   const config = statusConfig[request.status];
                   const StatusIcon = config.icon;
                   return (
-                    <Card key={request.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                    <Card
+                      key={request.id}
+                      className="animate-slide-up border-border/70 shadow-soft transition-colors hover:border-primary/15"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
                       <CardContent className="p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -374,7 +383,11 @@ export default function Dashboard() {
                 completedRequests.map((request, index) => {
                   const config = statusConfig[request.status];
                   return (
-                    <Card key={request.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                    <Card
+                      key={request.id}
+                      className="animate-slide-up border-border/70 shadow-soft transition-colors hover:border-primary/15"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
                       <CardContent className="p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -675,6 +688,6 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AppPageShell>
   );
 }

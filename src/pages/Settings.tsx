@@ -116,7 +116,7 @@ export default function Settings() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container max-w-4xl py-8 flex justify-center">
+        <div className="container flex max-w-4xl justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </Layout>
@@ -125,13 +125,14 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div className="container max-w-4xl py-8">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+      <div className="container max-w-4xl py-10 md:py-12">
+        <div className="mb-10 space-y-2">
+          <p className="section-label">Preferences</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             Settings
           </h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and preferences
+          <p className="max-w-lg text-muted-foreground">
+            Notifications, privacy, and account options.
           </p>
         </div>
 

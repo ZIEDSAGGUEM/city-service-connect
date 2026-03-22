@@ -155,48 +155,59 @@ export default function Services() {
   }, [searchQuery, locationQuery, selectedCategory, setSearchParams]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
+    <div className="relative min-h-screen flex flex-col bg-gradient-mesh bg-dot-pattern">
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute right-0 top-32 h-72 w-72 rounded-full bg-primary/[0.06] blur-3xl" />
+      </div>
       <Header onOpenAI={() => setIsAIOpen(true)} />
 
-      <main className="flex-1 container py-8">
-        {/* Search and Filters Header */}
-        <div className="flex flex-col gap-4 mb-8">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            {/* Name / Service search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <main className="flex-1 container py-10 md:py-12">
+        <div className="mb-10 space-y-2">
+          <p className="section-label">Directory</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            Find your provider
+          </h1>
+          <p className="max-w-2xl text-muted-foreground">
+            Search by skill, filter by price and availability, then open a profile to book.
+          </p>
+        </div>
+
+        <div className="mb-10 flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by name, service, or skills..."
+                placeholder="Name, service, or skills…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="h-12 pl-11 shadow-sm"
               />
             </div>
-            {/* Location search */}
-            <div className="flex-1 relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <div className="relative flex-1">
+              <MapPin className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Location..."
+                placeholder="City or area"
                 value={locationQuery}
                 onChange={(e) => setLocationQuery(e.target.value)}
-                className="pl-10"
+                className="h-12 pl-11 shadow-sm"
               />
             </div>
             <Button
-              variant="outline"
+              variant={showFilters ? 'default' : 'outline'}
               size="icon"
+              className="h-12 w-12 shrink-0 rounded-xl border-primary/20 shadow-sm"
               onClick={() => setShowFilters(!showFilters)}
-              className={showFilters ? 'bg-primary text-primary-foreground' : ''}
+              aria-expanded={showFilters}
+              aria-label="Toggle filters"
             >
               <SlidersHorizontal className="h-5 w-5" />
             </Button>
           </div>
 
-          {/* Filters Panel */}
           {showFilters && (
-            <div className="bg-card rounded-xl p-6 shadow-sm border animate-fade-in">
+            <div className="animate-fade-in rounded-2xl border border-border/80 bg-card/95 p-6 shadow-medium backdrop-blur-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg">Filters</h3>
                 <Button variant="ghost" size="sm" onClick={handleClearFilters}>
@@ -287,18 +298,17 @@ export default function Services() {
           )}
         </div>
 
-        {/* Results Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
               {selectedCategory === 'all'
-                ? 'All Service Providers'
-                : `${categories.find((c) => c.id === selectedCategory)?.name || ''} Providers`}
-            </h1>
-            <p className="text-muted-foreground mt-1">
+                ? 'All providers'
+                : `${categories.find((c) => c.id === selectedCategory)?.name || ''} providers`}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground md:text-base">
               {isLoading
-                ? 'Loading...'
-                : `${sortedProviders.length} provider${sortedProviders.length !== 1 ? 's' : ''} found`}
+                ? 'Loading…'
+                : `${sortedProviders.length} match${sortedProviders.length !== 1 ? 'es' : ''}`}
             </p>
           </div>
         </div>

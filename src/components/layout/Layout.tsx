@@ -1,5 +1,6 @@
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { AppPageShell } from './AppPageShell';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,16 +9,10 @@ interface LayoutProps {
 
 export function Layout({ children, onOpenAI }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <AppPageShell>
       <Header onOpenAI={onOpenAI} />
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="relative flex-1">{children}</main>
       <Footer />
-    </div>
+    </AppPageShell>
   );
 }
-
-
-
-

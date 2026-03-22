@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
   const { isAuthenticated } = useAuth();
-  const { on } = useSocketContext();
+  const { on, connected } = useSocketContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -40,15 +40,15 @@ export function NotificationBell() {
     loadNotifications();
   }, [isAuthenticated, loadNotifications]);
 
-  // Real-time notifications via WebSocket
+  // Real-time notifications via WebSocket (re-subscribe when socket connects)
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !connected) return;
     const unsub = on('notification', (notification: Notification) => {
       setNotifications((prev) => [notification, ...prev]);
       setUnreadCount((prev) => prev + 1);
     });
     return unsub;
-  }, [isAuthenticated, on]);
+  }, [isAuthenticated, connected, on]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -96,7 +96,7 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end">
+      <DropdownMenuContent className="w-80 rounded-xl border-border/80 shadow-large" align="end">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
           {unreadCount > 0 && (

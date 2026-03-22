@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AppPageShell } from '@/components/layout/AppPageShell';
 import { HeroSection } from '@/components/home/HeroSection';
 import { CategorySection } from '@/components/home/CategorySection';
 import { FeaturedProviders } from '@/components/home/FeaturedProviders';
@@ -11,9 +12,9 @@ const Index = () => {
   const [isAIOpen, setIsAIOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <AppPageShell>
       <Header onOpenAI={() => setIsAIOpen(true)} />
-      <main className="flex-1">
+      <main className="relative flex-1">
         <HeroSection />
         <CategorySection />
         <FeaturedProviders />
@@ -21,7 +22,7 @@ const Index = () => {
       </main>
       <Footer />
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
-    </div>
+    </AppPageShell>
   );
 };
 

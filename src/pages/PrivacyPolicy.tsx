@@ -1,15 +1,21 @@
 import { Layout } from '@/components/layout/Layout';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function PrivacyPolicy() {
   return (
     <Layout>
-      <div className="container max-w-3xl py-12">
-        <h1 className="font-display text-4xl font-bold text-foreground mb-2">
-          Privacy Policy
-        </h1>
-        <p className="text-muted-foreground mb-8">Last updated: March 2026</p>
+      <div className="container max-w-3xl py-10 md:py-14">
+        <div className="mb-8 space-y-2">
+          <p className="section-label">Legal</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            Privacy Policy
+          </h1>
+          <p className="text-sm text-muted-foreground">Last updated: March 2026</p>
+        </div>
 
-        <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
+        <Card className="border-border/70 shadow-soft">
+          <CardContent className="p-6 md:p-10">
+        <div className="prose prose-slate max-w-none space-y-6 dark:prose-invert">
           <section>
             <h2 className="text-2xl font-semibold mt-8 mb-3">1. Information We Collect</h2>
             <p className="text-muted-foreground leading-relaxed">
@@ -115,6 +121,8 @@ export default function PrivacyPolicy() {
             </p>
           </section>
         </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

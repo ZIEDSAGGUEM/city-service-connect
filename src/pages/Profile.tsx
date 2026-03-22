@@ -111,13 +111,14 @@ export default function Profile() {
 
   return (
     <Layout>
-      <div className="container max-w-4xl py-8">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            My Profile
+      <div className="container max-w-4xl py-10 md:py-12">
+        <div className="mb-10 space-y-2">
+          <p className="section-label">Account</p>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            My profile
           </h1>
-          <p className="text-muted-foreground">
-            Manage your account information and preferences
+          <p className="max-w-lg text-muted-foreground">
+            Manage your account information and security.
           </p>
         </div>
 

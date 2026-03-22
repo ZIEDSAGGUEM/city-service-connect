@@ -33,64 +33,58 @@ export function CategorySection() {
 
     fetchCategories();
   }, []);
+
   return (
-    <section className="py-16 md:py-24 bg-background">
+    <section className="relative py-20 md:py-28">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       <div className="container">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
-          <div>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
-              Browse by Category
+        <div className="mb-14 flex flex-col gap-6 md:mb-16 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-xl space-y-3">
+            <p className="section-label">Categories</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-[2.5rem]">
+              Browse by specialty
             </h2>
-            <p className="text-lg text-muted-foreground max-w-xl">
-              Find the right professional for any home service need
+            <p className="text-lg leading-relaxed text-muted-foreground">
+              Every trade in one place—pick a category and discover pros who fit your project.
             </p>
           </div>
           <Link
             to="/services"
-            className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
+            className="group inline-flex items-center gap-2 self-start rounded-full border border-primary/25 bg-card px-5 py-2.5 text-sm font-semibold text-primary shadow-sm transition-all hover:border-primary/40 hover:bg-primary/5 hover:gap-3 md:self-auto"
           >
-            View all services
-            <ArrowRight className="h-4 w-4" />
+            View all
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
 
-        {/* Category Grid */}
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
             {categories.map((category, index) => {
-            const Icon = iconMap[category.icon] || Home;
-            return (
-              <Link
-                key={category.id}
-                to={`/services?category=${category.id}`}
-                className="group relative p-6 bg-card rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1 animate-slide-up"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-colors mb-4">
-                  <Icon className="h-7 w-7 text-primary group-hover:text-primary-foreground transition-colors" />
-                </div>
-                <h3 className="font-display font-semibold text-lg text-foreground mb-1">
-                  {category.name}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {category.description}
-                </p>
-                <p className="text-sm font-medium text-primary">
-                  {category.providerCount} providers
-                </p>
-
-                {/* Hover Arrow */}
-                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowRight className="h-5 w-5 text-primary" />
-                </div>
-              </Link>
-            );
-          })}
+              const Icon = iconMap[category.icon] || Home;
+              return (
+                <Link
+                  key={category.id}
+                  to={`/services?category=${category.id}`}
+                  className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-medium animate-slide-up backdrop-blur-sm"
+                  style={{ animationDelay: `${index * 0.04}s` }}
+                >
+                  <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/[0.06] transition-transform duration-500 group-hover:scale-150" />
+                  <div className="relative">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/12 to-primary/5 text-primary ring-1 ring-primary/10 transition-all duration-300 group-hover:from-primary group-hover:to-primary/90 group-hover:text-primary-foreground group-hover:ring-primary/20 group-hover:shadow-md">
+                      <Icon className="h-7 w-7" />
+                    </div>
+                    <h3 className="font-display text-lg font-semibold text-foreground">{category.name}</h3>
+                    <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted-foreground">{category.description}</p>
+                    <p className="mt-4 text-sm font-semibold text-primary">{category.providerCount} providers</p>
+                    <ArrowRight className="absolute right-0 top-6 h-5 w-5 text-primary opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

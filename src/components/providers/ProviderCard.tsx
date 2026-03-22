@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import type { Provider } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Star, Shield, Clock, MapPin } from 'lucide-react';
+import { Star, Shield, Clock, MapPin, ArrowUpRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ProviderCardProps {
   provider: Provider;
@@ -10,99 +11,105 @@ interface ProviderCardProps {
 
 export function ProviderCard({ provider }: ProviderCardProps) {
   const availabilityColors = {
-    AVAILABLE: 'bg-success text-success-foreground',
-    BUSY: 'bg-warning text-warning-foreground',
-    UNAVAILABLE: 'bg-muted text-muted-foreground',
+    AVAILABLE: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+    BUSY: 'bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/20',
+    UNAVAILABLE: 'bg-muted text-muted-foreground border-border',
   };
 
   const availabilityLabels = {
-    AVAILABLE: 'Available Now',
+    AVAILABLE: 'Available',
     BUSY: 'Busy',
-    UNAVAILABLE: 'Unavailable',
+    UNAVAILABLE: 'Away',
   };
 
   return (
     <Link
       to={`/providers/${provider.id}`}
-      className="group block bg-card rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+      className={cn(
+        'group relative flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 text-left shadow-soft',
+        'transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-medium',
+      )}
     >
-      {/* Header */}
-      <div className="relative p-5 pb-0">
-        <div className="flex items-start gap-4">
-          <Avatar className="h-16 w-16 border-2 border-primary/20">
-            <AvatarImage src={provider.user?.avatar || undefined} alt={provider.user?.name || 'Provider'} />
-            <AvatarFallback>{provider.user?.name?.charAt(0).toUpperCase() || 'P'}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-display font-semibold text-lg text-foreground truncate group-hover:text-primary transition-colors">
-                {provider.user?.name || 'Unknown Provider'}
-              </h3>
-              {provider.verified && (
-                <Shield className="h-4 w-4 text-primary flex-shrink-0" />
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground mb-2">
-              {provider.category?.icon} {provider.category?.name || 'Service Provider'}
-            </p>
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-accent text-accent" />
-              <span className="font-medium text-foreground">{provider.rating.toFixed(1)}</span>
-              <span className="text-sm text-muted-foreground">
-                ({provider.reviewCount} reviews)
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Availability Badge */}
+      <div className="absolute right-4 top-4 z-10">
         <Badge
-          className={`absolute top-4 right-4 ${availabilityColors[provider.availability]}`}
+          variant="outline"
+          className={cn('border font-medium shadow-sm backdrop-blur-sm', availabilityColors[provider.availability])}
         >
           {availabilityLabels[provider.availability]}
         </Badge>
       </div>
 
-      {/* Body */}
-      <div className="p-5">
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-          {provider.bio || 'No description available'}
+      <div className="relative border-b border-border/50 bg-gradient-to-br from-primary/[0.04] to-transparent p-5 pb-4">
+        <div className="flex gap-4">
+          <Avatar className="h-[4.5rem] w-[4.5rem] border-2 border-card shadow-md ring-2 ring-primary/10">
+            <AvatarImage src={provider.user?.avatar || undefined} alt={provider.user?.name || 'Provider'} />
+            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-lg font-semibold text-primary">
+              {provider.user?.name?.charAt(0).toUpperCase() || 'P'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1 pt-0.5 pr-16">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate font-display text-lg font-semibold text-foreground transition-colors group-hover:text-primary">
+                {provider.user?.name || 'Provider'}
+              </h3>
+              {provider.verified && (
+                <Shield className="h-4 w-4 shrink-0 text-primary" aria-label="Verified" />
+              )}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="mr-1">{provider.category?.icon}</span>
+              {provider.category?.name || 'Service'}
+            </p>
+            <div className="mt-2 flex items-center gap-1.5">
+              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+              <span className="font-semibold text-foreground">{provider.rating.toFixed(1)}</span>
+              <span className="text-sm text-muted-foreground">({provider.reviewCount} reviews)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <p className="line-clamp-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+          {provider.bio || 'Experienced professional ready to help with your project.'}
         </p>
 
-        {/* Skills */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           {provider.skills.slice(0, 3).map((skill) => (
             <span
               key={skill}
-              className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded-md"
+              className="rounded-lg border border-border/60 bg-secondary/50 px-2.5 py-1 text-xs font-medium text-secondary-foreground"
             >
               {skill}
             </span>
           ))}
           {provider.skills.length > 3 && (
-            <span className="px-2 py-1 text-xs text-muted-foreground">
-              +{provider.skills.length - 3} more
-            </span>
+            <span className="self-center text-xs text-muted-foreground">+{provider.skills.length - 3}</span>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{provider.responseTime}</span>
-            </div>
+        <div className="mt-5 flex items-end justify-between border-t border-border/50 pt-4">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:text-sm">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {provider.responseTime}
+            </span>
             {provider.user?.location && (
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                <span>{provider.user.location}</span>
-              </div>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" />
+                {provider.user.location}
+              </span>
             )}
           </div>
-          <p className="font-semibold text-foreground">
-            ${provider.hourlyRate}<span className="text-sm font-normal text-muted-foreground">/hr</span>
-          </p>
+          <div className="text-right">
+            <span className="font-display text-xl font-bold text-foreground">${provider.hourlyRate}</span>
+            <span className="text-sm font-normal text-muted-foreground">/hr</span>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-end text-sm font-semibold text-primary opacity-0 transition-all group-hover:opacity-100">
+          View profile
+          <ArrowUpRight className="ml-1 h-4 w-4" />
         </div>
       </div>
     </Link>
